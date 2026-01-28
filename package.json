@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "@tanstack/react-query": "^5.90.20",
+    "framer-motion": "^12.29.2",
+    "lucide-react": "^0.563.0"
+  }
+}

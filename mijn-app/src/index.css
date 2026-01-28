@@ -1,0 +1,10 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Optioneel: zorg dat de achtergrond altijd donker is, zoals je dashboard */
+body {
+  margin: 0;
+  background-color: #020617; /* De diepblauwe/zwarte kleur van Tailwind slate-950 */
+  color: white;
+}
