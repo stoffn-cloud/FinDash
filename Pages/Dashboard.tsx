@@ -7,7 +7,11 @@ import {
   RefreshCw,
   LayoutDashboard,
   History,
-  Grid3X3
+  Grid3X3,
+  Globe,
+  Calendar,
+  Castle,
+  Calculator
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,6 +20,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DashboardContent from "@/components/dashboard/DashboardContent";
 import TransactionHistory from "@/components/dashboard/TransactionHistory";
 import CorrelationsTab from "@/components/dashboard/CorrelationsTab";
+import MarketsTab from "@/components/dashboard/MarketsTab";
+import CalendarTab from "@/components/dashboard/CalendarTab";
+import SandboxTab from "@/components/dashboard/SandboxTab";
+import CalculationsTab from "@/components/dashboard/CalculationsTab";
 import AssetClassDetail from "@/components/dashboard/AssetClassDetail";
 
 export default function Dashboard() {
@@ -131,6 +139,34 @@ export default function Dashboard() {
                 Correlations
               </TabsTrigger>
               <TabsTrigger 
+                value="markets"
+                className="data-[state=active]:bg-slate-700 data-[state=active]:text-white text-slate-400"
+              >
+                <Globe className="w-4 h-4 mr-2" />
+                Markets
+              </TabsTrigger>
+              <TabsTrigger 
+                value="calendar"
+                className="data-[state=active]:bg-slate-700 data-[state=active]:text-white text-slate-400"
+              >
+                <Calendar className="w-4 h-4 mr-2" />
+                Calendar
+              </TabsTrigger>
+              <TabsTrigger 
+                value="sandbox"
+                className="data-[state=active]:bg-slate-700 data-[state=active]:text-white text-slate-400"
+              >
+                <Castle className="w-4 h-4 mr-2" />
+                Sandbox
+              </TabsTrigger>
+              <TabsTrigger 
+                value="calculations"
+                className="data-[state=active]:bg-slate-700 data-[state=active]:text-white text-slate-400"
+              >
+                <Calculator className="w-4 h-4 mr-2" />
+                Calculations
+              </TabsTrigger>
+              <TabsTrigger 
                 value="transactions"
                 className="data-[state=active]:bg-slate-700 data-[state=active]:text-white text-slate-400"
               >
@@ -152,6 +188,22 @@ export default function Dashboard() {
                 assetClasses={assetClasses}
                 portfolio={portfolio}
               />
+            </TabsContent>
+
+            <TabsContent value="markets" className="mt-6">
+              <MarketsTab />
+            </TabsContent>
+
+            <TabsContent value="calendar" className="mt-6">
+              <CalendarTab assetClasses={assetClasses} />
+            </TabsContent>
+
+            <TabsContent value="sandbox" className="mt-6">
+              <SandboxTab portfolio={portfolio} />
+            </TabsContent>
+
+            <TabsContent value="calculations" className="mt-6">
+              <CalculationsTab />
             </TabsContent>
 
             <TabsContent value="transactions" className="mt-6">
