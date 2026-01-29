@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function PortfolioMetricCard({ 
@@ -18,44 +19,57 @@ export default function PortfolioMetricCard({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay }}
+      transition={{ duration: 0.4, delay }}
+      whileHover={{ y: -4 }} // Subtiele lift bij hover
       className={cn(
-        "relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900/80 to-slate-800/50",
-        "border border-slate-700/50 backdrop-blur-xl p-6",
-        "hover:border-slate-600/50 transition-all duration-300",
+        "relative overflow-hidden rounded-2xl bg-slate-900/40",
+        "border border-slate-800 backdrop-blur-md p-6",
+        "hover:border-blue-500/30 hover:bg-slate-900/60 transition-all duration-300 group",
         className
       )}
     >
-      <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+      {/* Achtergrond Glow Effect */}
+      <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-[60px] group-hover:bg-blue-500/20 transition-colors" />
       
       <div className="flex items-start justify-between relative z-10">
-        <div className="space-y-3">
-          <p className="text-sm font-medium text-slate-400 tracking-wide uppercase">
-            {title}
-          </p>
-          <div className="flex items-baseline gap-2">
-            <h3 className="text-3xl font-semibold text-white tracking-tight">
-              {value}
-            </h3>
-            {trendValue && (
-              <span className={cn(
-                "text-sm font-medium",
-                isPositive && "text-emerald-400",
-                isNegative && "text-rose-400",
-                !isPositive && !isNegative && "text-slate-400"
-              )}>
-                {isPositive && "+"}{trendValue}
-              </span>
-            )}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <p className="text-[10px] font-bold text-slate-500 tracking-[0.1em] uppercase">
+              {title}
+            </p>
           </div>
-          {subtitle && (
-            <p className="text-sm text-slate-500">{subtitle}</p>
-          )}
+
+          <div className="space-y-1">
+            <h3 className="text-3xl font-mono font-bold text-white tracking-tighter">
+              {value || "---"}
+            </h3>
+            
+            <div className="flex items-center gap-2">
+              {trendValue && (
+                <div className={cn(
+                  "flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold border",
+                  isPositive && "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+                  isNegative && "bg-rose-500/10 text-rose-400 border-rose-500/20",
+                  !isPositive && !isNegative && "bg-slate-800 text-slate-400 border-slate-700"
+                )}>
+                  {isPositive && <TrendingUp className="w-3 h-3" />}
+                  {isNegative && <TrendingDown className="w-3 h-3" />}
+                  {!isPositive && !isNegative && <Minus className="w-3 h-3" />}
+                  <span>{isPositive && "+"}{trendValue}</span>
+                </div>
+              )}
+              {subtitle && (
+                <span className="text-[11px] text-slate-500 font-medium">
+                  {subtitle}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
         
         {Icon && (
-          <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700/50">
-            <Icon className="w-5 h-5 text-blue-400" />
+          <div className="p-2.5 rounded-xl bg-slate-800/50 border border-slate-700/50 group-hover:border-blue-500/50 group-hover:bg-blue-500/10 transition-all">
+            <Icon className="w-5 h-5 text-blue-400 group-hover:text-blue-300" />
           </div>
         )}
       </div>

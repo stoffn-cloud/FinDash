@@ -1,17 +1,11 @@
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { Globe } from "lucide-react";
 
 const CURRENCY_FLAGS = {
-  USD: "🇺🇸",
-  EUR: "🇪🇺",
-  GBP: "🇬🇧",
-  JPY: "🇯🇵",
-  CHF: "🇨🇭",
-  CAD: "🇨🇦",
-  AUD: "🇦🇺",
-  CNY: "🇨🇳",
-  HKD: "🇭🇰",
-  SGD: "🇸🇬",
+  USD: "🇺🇸", EUR: "🇪🇺", GBP: "🇬🇧", JPY: "🇯🇵",
+  CHF: "🇨🇭", CAD: "🇨🇦", AUD: "🇦🇺", CNY: "🇨🇳",
+  HKD: "🇭🇰", SGD: "🇸🇬",
 };
 
 const CURRENCY_COLORS = {
@@ -21,24 +15,21 @@ const CURRENCY_COLORS = {
   JPY: "bg-rose-500",
   CHF: "bg-amber-500",
   CAD: "bg-cyan-500",
-  AUD: "bg-orange-500",
-  CNY: "bg-pink-500",
-  HKD: "bg-indigo-500",
-  SGD: "bg-teal-500",
+  // Fallback kleur
+  DEFAULT: "bg-slate-500"
 };
 
-export default function CurrencyBreakdown({ currencies }) {
+export default function CurrencyBreakdown({ currencies = [] }) {
+  // Controleer of er data is, anders tonen we een lege state
   if (!currencies || currencies.length === 0) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.3 }}
-        className="rounded-2xl bg-gradient-to-br from-slate-900/80 to-slate-800/50 border border-slate-700/50 backdrop-blur-xl p-6"
-      >
-        <h3 className="text-lg font-semibold text-white mb-6">Currency Exposure</h3>
-        <p className="text-slate-400">No currency data available</p>
-      </motion.div>
+      <div className="rounded-2xl bg-slate-900/50 border border-slate-700/50 p-6">
+        <h3 className="text-lg font-semibold text-white mb-6">Valuta Blootstelling</h3>
+        <div className="flex flex-col items-center justify-center py-8 text-slate-500">
+          <Globe className="w-8 h-8 mb-2 opacity-20" />
+          <p className="text-sm italic">Geen valuta data beschikbaar</p>
+        </div>
+      </div>
     );
   }
 
@@ -46,53 +37,59 @@ export default function CurrencyBreakdown({ currencies }) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.3 }}
-      className="rounded-2xl bg-gradient-to-br from-slate-900/80 to-slate-800/50 border border-slate-700/50 backdrop-blur-xl p-6"
+      className="rounded-2xl bg-slate-900/50 border border-slate-700/50 p-6 backdrop-blur-sm"
     >
-      <h3 className="text-lg font-semibold text-white mb-6">Currency Exposure</h3>
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="text-lg font-semibold text-white">Valuta Blootstelling</h3>
+        <span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">FX Exposure</span>
+      </div>
       
-      {/* Stacked bar */}
-      <div className="h-4 rounded-full overflow-hidden flex mb-6">
+      {/* 1. De Stacked Bar (Visueel overzicht) */}
+      <div className="h-3 rounded-full overflow-hidden flex mb-8 bg-slate-800">
         {currencies.map((currency, index) => (
           <motion.div
             key={currency.code}
             initial={{ width: 0 }}
             animate={{ width: `${currency.percentage}%` }}
-            transition={{ duration: 0.8, delay: 0.4 + index * 0.1 }}
+            transition={{ duration: 1, delay: 0.2 + index * 0.1 }}
             className={cn(
-              CURRENCY_COLORS[currency.code] || "bg-slate-500",
-              "h-full"
+              CURRENCY_COLORS[currency.code] || CURRENCY_COLORS.DEFAULT,
+              "h-full border-r border-slate-900/20 last:border-0"
             )}
+            title={`${currency.code}: ${currency.percentage}%`}
           />
         ))}
       </div>
       
-      {/* Currency list */}
-      <div className="space-y-3">
+      {/* 2. Gedetailleerde Lijst */}
+      <div className="space-y-4">
         {currencies.map((currency) => (
-          <div key={currency.code} className="flex items-center justify-between">
+          <div key={currency.code} className="flex items-center justify-between group">
             <div className="flex items-center gap-3">
-              <span className="text-lg">{CURRENCY_FLAGS[currency.code] || "🌐"}</span>
+              <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-lg border border-slate-700/50 group-hover:border-slate-500 transition-colors">
+                {CURRENCY_FLAGS[currency.code] || "🌐"}
+              </div>
               <div>
-                <p className="text-sm font-medium text-white">{currency.code}</p>
-                <p className="text-xs text-slate-500">
-                  ${(currency.value / 1000).toFixed(0)}K
+                <p className="text-sm font-bold text-white leading-none">{currency.code}</p>
+                <p className="text-[10px] text-slate-500 mt-1 uppercase">
+                  {currency.value >= 1000 ? `$${(currency.value / 1000).toFixed(1)}K` : `$${currency.value}`}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="w-20 h-2 bg-slate-700 rounded-full overflow-hidden">
+
+            <div className="flex items-center gap-4">
+              {/* Individuele voortgangsbalkjes */}
+              <div className="hidden sm:block w-16 h-1 bg-slate-800 rounded-full overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${currency.percentage}%` }}
-                  transition={{ duration: 0.8 }}
                   className={cn(
-                    CURRENCY_COLORS[currency.code] || "bg-slate-500",
-                    "h-full rounded-full"
+                    CURRENCY_COLORS[currency.code] || CURRENCY_COLORS.DEFAULT,
+                    "h-full"
                   )}
                 />
               </div>
-              <span className="text-sm font-semibold text-white w-14 text-right">
+              <span className="text-sm font-mono font-medium text-slate-300 w-12 text-right">
                 {currency.percentage.toFixed(1)}%
               </span>
             </div>

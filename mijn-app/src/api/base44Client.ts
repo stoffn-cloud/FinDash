@@ -1,6 +1,20 @@
-// Tijdelijke oplossing om de Base44 foutmelding te stoppen
+import { mockPortfolio } from "./mockData";
+
+// We maken een universele "nep" client die altijd jouw data teruggeeft
 export const base44 = {
-  useQuery: () => ({ data: null, isLoading: false, error: null }),
-  get: async () => ({}),
-  // Voeg hier andere functies toe als de terminal erom vraagt
+  // Dit simuleert de data-ophaler die je dashboard gebruikt
+  useQuery: (key) => {
+    console.log("Dashboard vraagt data op voor:", key);
+    return {
+      data: mockPortfolio,
+      isLoading: false,
+      error: null,
+      refetch: () => console.log("Refetch aangeroepen")
+    };
+  },
+  
+  // Mocht de code directe API-calls doen (async/await)
+  get: async (path) => {
+    return mockPortfolio;
+  }
 };

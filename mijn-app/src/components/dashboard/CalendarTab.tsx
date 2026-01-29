@@ -1,64 +1,85 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, Landmark, TrendingUp } from "lucide-react";
+import { ChevronLeft, ChevronRight, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameMonth, isSameDay, isToday } from "date-fns";
+import { 
+  format, 
+  startOfMonth, 
+  endOfMonth, 
+  startOfWeek, 
+  endOfWeek, 
+  addDays, 
+  addMonths, 
+  subMonths, 
+  isSameMonth, 
+  isToday 
+} from "date-fns";
+import { nl } from "date-fns/locale";
 
-// Central Bank Rate Decision Dates
+// Statische data voor centrale banken (blijft altijd relevant)
 const CENTRAL_BANK_EVENTS = [
-  { date: "2026-01-29", name: "Federal Reserve", flag: "🇺🇸", type: "central_bank" },
-  { date: "2026-02-06", name: "Bank of England", flag: "🇬🇧", type: "central_bank" },
+  { date: "2026-01-29", name: "Fed", flag: "🇺🇸", type: "central_bank" },
+  { date: "2026-02-06", name: "BoE", flag: "🇬🇧", type: "central_bank" },
   { date: "2026-02-18", name: "RBA", flag: "🇦🇺", type: "central_bank" },
   { date: "2026-03-06", name: "ECB", flag: "🇪🇺", type: "central_bank" },
-  { date: "2026-03-12", name: "Bank of Canada", flag: "🇨🇦", type: "central_bank" },
-  { date: "2026-03-14", name: "Bank of Japan", flag: "🇯🇵", type: "central_bank" },
-  { date: "2026-03-20", name: "SNB", flag: "🇨🇭", type: "central_bank" },
 ];
 
-// Sample Earnings Dates for Portfolio Holdings
-const EARNINGS_EVENTS = [
+// Uitgebreide lijst met mogelijke earnings data
+const GLOBAL_EARNINGS_DATABASE = [
   { date: "2026-01-28", name: "Apple", ticker: "AAPL", type: "earnings" },
   { date: "2026-01-29", name: "Microsoft", ticker: "MSFT", type: "earnings" },
   { date: "2026-01-30", name: "Tesla", ticker: "TSLA", type: "earnings" },
-  { date: "2026-02-04", name: "Amazon", ticker: "AMZN", type: "earnings" },
-  { date: "2026-02-05", name: "Alphabet", ticker: "GOOGL", type: "earnings" },
   { date: "2026-02-11", name: "NVIDIA", ticker: "NVDA", type: "earnings" },
-  { date: "2026-02-20", name: "Walmart", ticker: "WMT", type: "earnings" },
-  { date: "2026-03-05", name: "Broadcom", ticker: "AVGO", type: "earnings" },
+  { date: "2026-02-15", name: "Goldman Sachs", ticker: "GS", type: "earnings" },
 ];
 
-const ALL_EVENTS = [...CENTRAL_BANK_EVENTS, ...EARNINGS_EVENTS];
-
-export default function CalendarTab({ assetClasses }) {
+export default function CalendarTab({ assetClasses = [] }) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
+
+  // 1. Haal alle tickers op die in je mockData zitten
+  const myTickers = useMemo(() => {
+    const tickers = new Set();
+    assetClasses.forEach(ac => {
+      ac.holdings?.forEach(holding => {
+        if (holding.ticker) tickers.add(holding.ticker);
+      });
+    });
+    return tickers;
+  }, [assetClasses]);
+
+  // 2. Filter de kalender: Toon Centrale Banken ALTIJD, maar Earnings alleen als je de ticker bezit
+  const allEvents = useMemo(() => {
+    const relevantEarnings = GLOBAL_EARNINGS_DATABASE.filter(event => 
+      myTickers.has(event.ticker)
+    );
+    return [...CENTRAL_BANK_EVENTS, ...relevantEarnings];
+  }, [myTickers]);
 
   const getEventsForDate = (date) => {
     const dateStr = format(date, "yyyy-MM-dd");
-    return ALL_EVENTS.filter(event => event.date === dateStr);
+    return allEvents.filter(event => event.date === dateStr);
   };
 
+  // --- Render Logica (Header, Days, Cells) ---
   const renderHeader = () => (
-    <div className="flex items-center justify-between mb-6">
-      <h2 className="text-2xl font-bold text-white">
-        {format(currentMonth, "MMMM yyyy")}
-      </h2>
-      <div className="flex gap-2">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-          className="bg-slate-800/50 border-slate-700 hover:bg-slate-700/50 text-white"
-        >
+    <div className="flex items-center justify-between mb-8">
+      <div>
+        <h2 className="text-2xl font-bold text-white capitalize">
+          {format(currentMonth, "MMMM yyyy", { locale: nl })}
+        </h2>
+        <p className="text-slate-400 text-sm mt-1">
+          {myTickers.size > 0 
+            ? `Kalender voor jouw ${myTickers.size} holdings` 
+            : "Economische kalender"}
+        </p>
+      </div>
+      <div className="flex gap-2 bg-slate-800/50 p-1 rounded-xl border border-slate-700/50">
+        <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="text-slate-400">
           <ChevronLeft className="w-4 h-4" />
         </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-          className="bg-slate-800/50 border-slate-700 hover:bg-slate-700/50 text-white"
-        >
+        <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="text-slate-400">
           <ChevronRight className="w-4 h-4" />
         </Button>
       </div>
@@ -66,13 +87,11 @@ export default function CalendarTab({ assetClasses }) {
   );
 
   const renderDays = () => {
-    const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const days = ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"];
     return (
-      <div className="grid grid-cols-7 mb-2">
+      <div className="grid grid-cols-7 mb-2 border-b border-slate-700/50">
         {days.map(day => (
-          <div key={day} className="text-center text-sm font-medium text-slate-400 py-2">
-            {day}
-          </div>
+          <div key={day} className="text-center text-xs font-bold uppercase text-slate-500 py-3">{day}</div>
         ))}
       </div>
     );
@@ -90,7 +109,6 @@ export default function CalendarTab({ assetClasses }) {
 
     while (day <= endDate) {
       for (let i = 0; i < 7; i++) {
-        const cloneDay = day;
         const events = getEventsForDate(day);
         const isCurrentMonth = isSameMonth(day, monthStart);
 
@@ -98,18 +116,12 @@ export default function CalendarTab({ assetClasses }) {
           <div
             key={day.toString()}
             className={cn(
-              "min-h-[100px] border border-slate-700/50 p-2 transition-colors",
-              !isCurrentMonth && "bg-slate-900/50",
-              isCurrentMonth && "bg-slate-800/30",
-              isToday(day) && "border-blue-500/50 bg-blue-500/10"
+              "min-h-[110px] border-r border-b border-slate-700/30 p-2 transition-all",
+              !isCurrentMonth && "bg-slate-900/20 opacity-30",
+              isToday(day) && "bg-blue-500/5"
             )}
           >
-            <div className={cn(
-              "text-sm font-medium mb-1",
-              !isCurrentMonth && "text-slate-600",
-              isCurrentMonth && "text-slate-300",
-              isToday(day) && "text-blue-400"
-            )}>
+            <div className={cn("text-xs font-semibold mb-2", isToday(day) ? "text-blue-400" : "text-slate-500")}>
               {format(day, "d")}
             </div>
             <div className="space-y-1">
@@ -117,18 +129,13 @@ export default function CalendarTab({ assetClasses }) {
                 <div
                   key={idx}
                   className={cn(
-                    "text-xs px-1.5 py-0.5 rounded truncate",
+                    "text-[10px] px-2 py-1 rounded border truncate",
                     event.type === "central_bank" 
-                      ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                      : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                      ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                      : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                   )}
-                  title={event.type === "central_bank" ? `${event.name} Rate Decision` : `${event.name} (${event.ticker}) Earnings`}
                 >
-                  {event.type === "central_bank" ? (
-                    <span>{event.flag} {event.name}</span>
-                  ) : (
-                    <span>{event.ticker}</span>
-                  )}
+                  {event.type === "central_bank" ? `${event.flag} ${event.name}` : event.ticker}
                 </div>
               ))}
             </div>
@@ -136,37 +143,32 @@ export default function CalendarTab({ assetClasses }) {
         );
         day = addDays(day, 1);
       }
-      rows.push(
-        <div key={day.toString()} className="grid grid-cols-7">
-          {days}
-        </div>
-      );
+      rows.push(<div key={day.toString()} className="grid grid-cols-7 first:border-t border-l border-slate-700/30">{days}</div>);
       days = [];
     }
-    return <div>{rows}</div>;
+    return <div className="rounded-xl overflow-hidden border-t border-slate-700/30">{rows}</div>;
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="space-y-6"
-    >
-      <div className="rounded-2xl bg-gradient-to-br from-slate-900/80 to-slate-800/50 border border-slate-700/50 backdrop-blur-xl p-6">
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+      <div className="rounded-2xl bg-slate-900/50 border border-slate-700/50 p-6 backdrop-blur-md">
         {renderHeader()}
         {renderDays()}
         {renderCells()}
       </div>
 
-      {/* Legend */}
-      <div className="flex gap-6">
+      <div className="flex flex-wrap gap-4 p-4 bg-slate-800/30 rounded-xl border border-slate-700/50 items-center">
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded bg-amber-500/30 border border-amber-500/50" />
-          <span className="text-sm text-slate-400">Central Bank Decisions</span>
+          <div className="w-2 h-2 rounded-full bg-amber-500" />
+          <span className="text-xs text-slate-400 font-medium">Centrale Banken</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded bg-emerald-500/30 border border-emerald-500/50" />
-          <span className="text-sm text-slate-400">Earnings Announcements</span>
+          <div className="w-2 h-2 rounded-full bg-emerald-500" />
+          <span className="text-xs text-slate-400 font-medium">Jouw Earnings</span>
+        </div>
+        <div className="ml-auto text-[10px] text-slate-500 flex items-center gap-1">
+          <Info className="w-3 h-3" />
+          Data gebaseerd op jouw holdings in mockData.js
         </div>
       </div>
     </motion.div>

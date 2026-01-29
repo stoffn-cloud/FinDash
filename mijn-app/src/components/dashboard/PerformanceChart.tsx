@@ -7,26 +7,28 @@ import {
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer,
-  Legend 
+  Legend,
+  Area,
+  AreaChart,
+  ComposedChart
 } from "recharts";
 import { format, parseISO } from "date-fns";
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 shadow-2xl">
-        <p className="text-slate-400 text-xs mb-2">
-          {format(parseISO(label), "MMM d, yyyy")}
+      <div className="bg-slate-900/95 border border-slate-700 backdrop-blur-md rounded-xl px-4 py-3 shadow-2xl">
+        <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-2">
+          {format(parseISO(label), "dd MMM yyyy")}
         </p>
         {payload.map((entry, index) => (
-          <div key={index} className="flex items-center gap-2">
-            <div 
-              className="w-2 h-2 rounded-full"
-              style={{ backgroundColor: entry.color }}
-            />
-            <span className="text-sm text-slate-300">{entry.name}:</span>
-            <span className="text-sm font-semibold text-white">
-              {entry.value.toFixed(2)}%
+          <div key={index} className="flex items-center justify-between gap-8 mb-1 last:mb-0">
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: entry.color }} />
+              <span className="text-xs text-slate-300">{entry.name}</span>
+            </div>
+            <span className="text-xs font-mono font-bold text-white">
+              {entry.value >= 0 ? '+' : ''}{entry.value.toFixed(2)}%
             </span>
           </div>
         ))}
@@ -36,100 +38,107 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
-export default function PerformanceChart({ data, benchmarkName = "S&P 500" }) {
+export default function PerformanceChart({ data = [], benchmarkName = "Benchmark" }) {
   if (!data || data.length === 0) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.4 }}
-        className="rounded-2xl bg-gradient-to-br from-slate-900/80 to-slate-800/50 border border-slate-700/50 backdrop-blur-xl p-6"
-      >
-        <h3 className="text-lg font-semibold text-white mb-6">Performance vs Benchmark</h3>
-        <p className="text-slate-400">No performance data available</p>
-      </motion.div>
+      <div className="h-80 rounded-2xl bg-slate-900/50 border border-slate-700/50 flex items-center justify-center">
+        <p className="text-slate-500 italic">Geen rendementsdata beschikbaar</p>
+      </div>
     );
   }
 
-  // Normalize data to show percentage change from start
-  const startPortfolio = data[0]?.portfolio_value || 100;
-  const startBenchmark = data[0]?.benchmark_value || 100;
+  // Mapping: we gebruiken nu portfolioValue en benchmarkValue (CamelCase)
+  const startPortfolio = data[0]?.portfolioValue || 1;
+  const startBenchmark = data[0]?.benchmarkValue || 1;
   
   const normalizedData = data.map(item => ({
     date: item.date,
-    Portfolio: ((item.portfolio_value - startPortfolio) / startPortfolio) * 100,
-    [benchmarkName]: ((item.benchmark_value - startBenchmark) / startBenchmark) * 100,
+    Portfolio: ((item.portfolioValue - startPortfolio) / startPortfolio) * 100,
+    [benchmarkName]: ((item.benchmarkValue - startBenchmark) / startBenchmark) * 100,
   }));
 
   const lastPortfolio = normalizedData[normalizedData.length - 1]?.Portfolio || 0;
   const lastBenchmark = normalizedData[normalizedData.length - 1]?.[benchmarkName] || 0;
-  const outperformance = lastPortfolio - lastBenchmark;
+  const alpha = lastPortfolio - lastBenchmark;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.4 }}
-      className="rounded-2xl bg-gradient-to-br from-slate-900/80 to-slate-800/50 border border-slate-700/50 backdrop-blur-xl p-6"
+      className="rounded-2xl bg-slate-900/50 border border-slate-700/50 p-6 backdrop-blur-sm"
     >
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <h3 className="text-lg font-semibold text-white">Performance vs Benchmark</h3>
-          <p className="text-sm text-slate-400 mt-1">Comparing to {benchmarkName}</p>
+          <h3 className="text-lg font-bold text-white tracking-tight">Performance vs Markt</h3>
+          <p className="text-xs text-slate-500 uppercase font-medium tracking-wider">Cumulatief Rendement (%)</p>
         </div>
-        <div className="text-right">
-          <p className="text-xs text-slate-500 uppercase tracking-wide">Alpha</p>
-          <p className={`text-xl font-semibold ${outperformance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-            {outperformance >= 0 ? '+' : ''}{outperformance.toFixed(2)}%
+        <div className="bg-slate-800/50 px-4 py-2 rounded-xl border border-slate-700/50 text-right">
+          <p className="text-[10px] text-slate-500 font-bold uppercase mb-0.5">Alpha</p>
+          <p className={cn("text-lg font-mono font-bold", alpha >= 0 ? "text-emerald-400" : "text-rose-400")}>
+            {alpha >= 0 ? '↑' : '↓'} {Math.abs(alpha).toFixed(2)}%
           </p>
         </div>
       </div>
       
-      <div className="h-72">
+      <div className="h-80 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={normalizedData}>
-            <CartesianGrid 
-              strokeDasharray="3 3" 
-              stroke="#334155" 
-              vertical={false}
-            />
+          <ComposedChart data={normalizedData}>
+            <defs>
+              <linearGradient id="colorPortfolio" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.1}/>
+                <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
             <XAxis 
               dataKey="date" 
-              stroke="#64748b"
-              fontSize={12}
-              tickLine={false}
-              tickFormatter={(value) => format(parseISO(value), "MMM d")}
-            />
-            <YAxis 
-              stroke="#64748b"
-              fontSize={12}
+              stroke="#475569"
+              fontSize={10}
               tickLine={false}
               axisLine={false}
-              tickFormatter={(value) => `${value.toFixed(0)}%`}
+              tickFormatter={(val) => format(parseISO(val), "MMM")}
+              interval="preserveStartEnd"
+              padding={{ left: 10, right: 10 }}
             />
-            <Tooltip content={<CustomTooltip />} />
+            <YAxis 
+              stroke="#475569"
+              fontSize={10}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(val) => `${val}%`}
+            />
+            <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#334155', strokeWidth: 1 }} />
             <Legend 
-              wrapperStyle={{ paddingTop: '20px' }}
-              formatter={(value) => <span className="text-slate-300 text-sm">{value}</span>}
+              verticalAlign="top" 
+              align="right"
+              iconType="circle"
+              wrapperStyle={{ paddingBottom: '20px', fontSize: '12px' }}
             />
+            
+            {/* Benchmark Lijn (Gestippeld) */}
             <Line 
-              type="monotone" 
-              dataKey="Portfolio" 
-              stroke="#3B82F6" 
-              strokeWidth={2.5}
-              dot={false}
-              activeDot={{ r: 6, fill: "#3B82F6", stroke: "#1e293b", strokeWidth: 2 }}
-            />
-            <Line 
+              name={benchmarkName}
               type="monotone" 
               dataKey={benchmarkName}
               stroke="#64748b" 
-              strokeWidth={2}
-              strokeDasharray="5 5"
+              strokeWidth={1.5}
+              strokeDasharray="4 4"
               dot={false}
-              activeDot={{ r: 5, fill: "#64748b", stroke: "#1e293b", strokeWidth: 2 }}
+              activeDot={false}
             />
-          </LineChart>
+
+            {/* Portfolio Area + Lijn */}
+            <Area
+              name="Jouw Portfolio"
+              type="monotone"
+              dataKey="Portfolio"
+              stroke="#3B82F6"
+              strokeWidth={3}
+              fill="url(#colorPortfolio)"
+              dot={false}
+              activeDot={{ r: 6, fill: "#3B82F6", stroke: "#0f172a", strokeWidth: 3 }}
+            />
+          </ComposedChart>
         </ResponsiveContainer>
       </div>
     </motion.div>

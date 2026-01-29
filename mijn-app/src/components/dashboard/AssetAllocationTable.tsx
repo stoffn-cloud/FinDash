@@ -11,54 +11,54 @@ import { Badge } from "@/components/ui/badge";
 import { ChevronRight, TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export default function AssetAllocationTable({ assetClasses, onSelectAsset }) {
+/**
+ * Dit component is nu volledig onafhankelijk van Base44.
+ * Het verwacht een array 'assetClasses' met standaard eigenschappen.
+ */
+export default function AssetAllocationTable({ assetClasses = [], onSelectAsset }) {
+  // 1. Veiligheidscheck: als er geen data is, toon een nette lege staat
   if (!assetClasses || assetClasses.length === 0) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="rounded-2xl bg-gradient-to-br from-slate-900/80 to-slate-800/50 border border-slate-700/50 backdrop-blur-xl p-6"
-      >
-        <h3 className="text-lg font-semibold text-white mb-4">Asset Allocation</h3>
-        <p className="text-slate-400">No asset classes configured</p>
-      </motion.div>
+      <div className="rounded-2xl bg-slate-900/80 border border-slate-700/50 p-6 text-center">
+        <h3 className="text-lg font-semibold text-white mb-2">Asset Allocation</h3>
+        <p className="text-slate-400">Geen data beschikbaar om weer te geven.</p>
+      </div>
     );
   }
 
+  // 2. Berekeningen op basis van de meegegeven props
   const totalValue = assetClasses.reduce((sum, ac) => sum + (ac.current_value || 0), 0);
 
   const formatCurrency = (value) => {
-    if (value >= 1000000) return `$${(value / 1000000).toFixed(2)}M`;
-    if (value >= 1000) return `$${(value / 1000).toFixed(0)}K`;
-    return `$${value?.toFixed(0) || 0}`;
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0,
+    }).format(value);
   };
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.2 }}
       className="rounded-2xl bg-gradient-to-br from-slate-900/80 to-slate-800/50 border border-slate-700/50 backdrop-blur-xl overflow-hidden"
     >
-      <div className="p-6 border-b border-slate-700/50">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-white">Asset Allocation Summary</h3>
-          <Badge variant="outline" className="border-slate-600 text-slate-300">
-            {assetClasses.length} Classes
-          </Badge>
-        </div>
+      <div className="p-6 border-b border-slate-700/50 flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-white">Portfolio Overzicht</h3>
+        <Badge variant="outline" className="border-slate-600 text-slate-300">
+          {assetClasses.length} Categorieën
+        </Badge>
       </div>
 
-      {/* Allocation Bar */}
-      <div className="px-6 py-4 border-b border-slate-700/50">
+      {/* Visuele Allocatie Balk */}
+      <div className="px-6 py-4 border-b border-slate-700/50 bg-slate-900/20">
         <div className="h-3 rounded-full overflow-hidden flex bg-slate-800">
           {assetClasses.map((ac, index) => (
             <motion.div
-              key={ac.id || ac.name}
+              key={index}
               initial={{ width: 0 }}
-              animate={{ width: `${ac.allocation_percent}%` }}
-              transition={{ duration: 0.8, delay: index * 0.1 }}
-              className="h-full first:rounded-l-full last:rounded-r-full"
+              animate={{ width: `${ac.allocation_percent || 0}%` }}
+              className="h-full"
               style={{ backgroundColor: ac.color || '#3B82F6' }}
             />
           ))}
@@ -68,47 +68,38 @@ export default function AssetAllocationTable({ assetClasses, onSelectAsset }) {
       <Table>
         <TableHeader>
           <TableRow className="border-slate-700/50 hover:bg-transparent">
-            <TableHead className="text-slate-400 font-medium">Asset Class</TableHead>
-            <TableHead className="text-slate-400 font-medium text-right">Allocation</TableHead>
-            <TableHead className="text-slate-400 font-medium text-right">Value</TableHead>
-            <TableHead className="text-slate-400 font-medium text-right">Expected Return</TableHead>
-            <TableHead className="text-slate-400 font-medium text-right">Volatility (σ)</TableHead>
-            <TableHead className="text-slate-400 font-medium text-right">YTD</TableHead>
-            <TableHead className="text-slate-400 font-medium w-10"></TableHead>
+            <TableHead className="text-slate-400">Categorie</TableHead>
+            <TableHead className="text-slate-400 text-right">Allocatie</TableHead>
+            <TableHead className="text-slate-400 text-right">Waarde</TableHead>
+            <TableHead className="text-slate-400 text-right">Verwacht Rendement</TableHead>
+            <TableHead className="text-slate-400 text-right">YTD</TableHead>
+            <TableHead className="w-10"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {assetClasses.map((ac, index) => (
             <TableRow
-              key={ac.id || ac.name}
-              onClick={() => onSelectAsset(ac)}
-              className="border-slate-700/50 cursor-pointer hover:bg-slate-800/50 transition-colors group"
+              key={index}
+              onClick={() => onSelectAsset && onSelectAsset(ac)}
+              className="border-slate-700/50 cursor-pointer hover:bg-slate-800/50 group"
             >
-              <TableCell>
+              <TableCell className="font-medium text-white">
                 <div className="flex items-center gap-3">
-                  <div 
-                    className="w-3 h-3 rounded-full" 
-                    style={{ backgroundColor: ac.color || '#3B82F6' }}
-                  />
-                  <span className="font-medium text-white">{ac.name}</span>
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ac.color }} />
+                  {ac.name}
                 </div>
               </TableCell>
-              <TableCell className="text-right">
-                <span className="text-slate-300">{ac.allocation_percent?.toFixed(1)}%</span>
+              <TableCell className="text-right text-slate-300">
+                {ac.allocation_percent?.toFixed(1)}%
               </TableCell>
-              <TableCell className="text-right">
-                <span className="text-white font-medium">{formatCurrency(ac.current_value)}</span>
+              <TableCell className="text-right text-white font-medium">
+                {formatCurrency(ac.current_value)}
               </TableCell>
-              <TableCell className="text-right">
-                <span className={cn(
-                  "font-medium",
-                  ac.expected_return >= 0 ? "text-emerald-400" : "text-rose-400"
-                )}>
-                  {ac.expected_return >= 0 ? '+' : ''}{ac.expected_return?.toFixed(1)}%
-                </span>
-              </TableCell>
-              <TableCell className="text-right">
-                <span className="text-amber-400">{ac.volatility?.toFixed(1)}%</span>
+              <TableCell className={cn(
+                "text-right font-medium",
+                ac.expected_return >= 0 ? "text-emerald-400" : "text-rose-400"
+              )}>
+                {ac.expected_return > 0 ? '+' : ''}{ac.expected_return?.toFixed(1)}%
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-1">
@@ -117,39 +108,29 @@ export default function AssetAllocationTable({ assetClasses, onSelectAsset }) {
                   ) : (
                     <TrendingDown className="w-3 h-3 text-rose-400" />
                   )}
-                  <span className={cn(
-                    "font-medium",
-                    ac.ytd_return >= 0 ? "text-emerald-400" : "text-rose-400"
-                  )}>
-                    {ac.ytd_return >= 0 ? '+' : ''}{ac.ytd_return?.toFixed(1)}%
+                  <span className={ac.ytd_return >= 0 ? "text-emerald-400" : "text-rose-400"}>
+                    {ac.ytd_return?.toFixed(1)}%
                   </span>
                 </div>
               </TableCell>
               <TableCell>
-                <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-white transition-colors" />
+                <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-white" />
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
 
-      {/* Portfolio Totals */}
-      <div className="p-4 border-t border-slate-700/50 bg-slate-800/30">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-slate-400">Portfolio Total</span>
-          <div className="flex items-center gap-8">
-            <span className="text-white font-semibold">{formatCurrency(totalValue)}</span>
-            <span className="text-slate-400">
-              Wtd. Exp. Return: <span className="text-emerald-400 font-medium">
-                {(assetClasses.reduce((sum, ac) => sum + (ac.expected_return * ac.allocation_percent / 100), 0)).toFixed(1)}%
-              </span>
+      {/* Statistieken onderaan */}
+      <div className="p-4 border-t border-slate-700/50 bg-slate-800/30 flex justify-between text-xs sm:text-sm">
+        <span className="text-slate-400">Totaal Portfolio</span>
+        <div className="flex gap-6">
+          <span className="text-white font-bold">{formatCurrency(totalValue)}</span>
+          <span className="text-slate-400">
+            Wtd. Return: <span className="text-emerald-400">
+              {(assetClasses.reduce((sum, ac) => sum + ((ac.expected_return || 0) * (ac.allocation_percent || 0) / 100), 0)).toFixed(1)}%
             </span>
-            <span className="text-slate-400">
-              Wtd. Vol: <span className="text-amber-400 font-medium">
-                {Math.sqrt(assetClasses.reduce((sum, ac) => sum + Math.pow(ac.volatility * ac.allocation_percent / 100, 2), 0)).toFixed(1)}%
-              </span>
-            </span>
-          </div>
+          </span>
         </div>
       </div>
     </motion.div>
