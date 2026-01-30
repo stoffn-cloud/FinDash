@@ -5,7 +5,6 @@ import * as RechartsPrimitive from "recharts"
 
 import { cn } from "../../lib/utils"
 
-// Dit zijn de types voor de configuratie van de grafiekkleuren en labels
 export type ChartConfig = {
   [key: string]: {
     label?: React.ReactNode
@@ -97,8 +96,9 @@ const ChartTooltipContent = React.forwardRef<
       labelKey?: string
     }
 >(
-  (
-    {
+  (props, ref) => {
+    // FIX: Destructure via 'as any' om 'Property label/payload does not exist' te voorkomen
+    const {
       active,
       payload,
       className,
@@ -112,9 +112,8 @@ const ChartTooltipContent = React.forwardRef<
       color,
       nameKey,
       labelKey,
-    },
-    ref
-  ) => {
+    } = props as any
+
     const { config } = useChart()
 
     const tooltipLabel = React.useMemo(() => {
@@ -167,14 +166,14 @@ const ChartTooltipContent = React.forwardRef<
       >
         {!hideLabel && tooltipLabel}
         <div className="grid gap-1.5">
-          {payload.map((item, index) => {
+          {payload.map((item: any, index: number) => {
             const key = `${nameKey || item.name || item.dataKey || "value"}`
             const itemConfig = config[key]
-            const indicatorColor = color || item.payload.fill || item.color
+            const indicatorColor = color || item.payload?.fill || item.color
 
             return (
               <div
-                key={item.dataKey}
+                key={item.dataKey || index}
                 className={cn(
                   "flex w-full items-stretch gap-2 [&>svg]:h-2.5 [&>svg]:w-2.5 [&>svg]:text-muted-foreground",
                   indicator === "dot" && "items-center"
@@ -241,15 +240,15 @@ const ChartLegend = RechartsPrimitive.Legend
 
 const ChartLegendContent = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<"div"> &
-    Pick<RechartsPrimitive.LegendProps, "payload" | "verticalAlign"> & {
-      hideIcon?: boolean
-      nameKey?: string
-    }
->(({ className, hideIcon = false, payload, verticalAlign, nameKey }, ref) => {
+  React.HTMLAttributes<HTMLDivElement> & {
+    payload?: any[]
+    verticalAlign?: "top" | "bottom"
+    hideIcon?: boolean
+    nameKey?: string
+  }
+>(({ className, hideIcon = false, payload, verticalAlign, nameKey, ...props }, ref) => {
   const { config } = useChart()
 
-  // VERANDER DEZE REGEL (was: !payload?.length)
   if (!Array.isArray(payload) || payload.length === 0) {
     return null
   }
@@ -262,14 +261,15 @@ const ChartLegendContent = React.forwardRef<
         verticalAlign === "top" ? "pb-3" : "pt-3",
         className
       )}
+      {...props}
     >
-      {payload.map((item: any) => {
+      {payload.map((item: any, index: number) => {
         const key = `${nameKey || item.dataKey || "value"}`
         const itemConfig = config[key]
 
         return (
           <div
-            key={item.value}
+            key={`item-${index}`}
             className={cn(
               "flex items-center gap-1.5 [&>svg]:h-3 [&>svg]:w-3 [&>svg]:text-muted-foreground"
             )}
