@@ -1,14 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import React from "react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { 
   ArrowUpRight, 
   ArrowDownRight, 
   DollarSign, 
-  TrendingUp,
   Wallet,
-  Receipt
+  Receipt,
+  Search
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -21,136 +20,135 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
+// Configuratie voor de verschillende transactietypes
 const TYPE_CONFIG = {
-  buy: { icon: ArrowDownRight, color: "text-blue-400", bg: "bg-blue-500/10", label: "Buy" },
-  sell: { icon: ArrowUpRight, color: "text-emerald-400", bg: "bg-emerald-500/10", label: "Sell" },
+  buy: { icon: ArrowDownRight, color: "text-blue-400", bg: "bg-blue-500/10", label: "Aankoop" },
+  sell: { icon: ArrowUpRight, color: "text-emerald-400", bg: "bg-emerald-500/10", label: "Verkoop" },
   dividend: { icon: DollarSign, color: "text-amber-400", bg: "bg-amber-500/10", label: "Dividend" },
-  deposit: { icon: Wallet, color: "text-green-400", bg: "bg-green-500/10", label: "Deposit" },
-  withdrawal: { icon: Wallet, color: "text-rose-400", bg: "bg-rose-500/10", label: "Withdrawal" },
-  fee: { icon: Receipt, color: "text-slate-400", bg: "bg-slate-500/10", label: "Fee" },
+  deposit: { icon: Wallet, color: "text-green-400", bg: "bg-green-500/10", label: "Storting" },
+  withdrawal: { icon: Wallet, color: "text-rose-400", bg: "bg-rose-500/10", label: "Opname" },
+  fee: { icon: Receipt, color: "text-slate-400", bg: "bg-slate-500/10", label: "Kosten" },
 };
 
-export default function TransactionHistory() {
-  const { data: transactions = [], isLoading } = useQuery({
-    queryKey: ["transactions"],
-    queryFn: () => base44.entities.Transaction.list("-date", 50),
-  });
-
+export default function TransactionHistory({ transactions = [] }) {
+  
   const formatCurrency = (value) => {
-    if (!value) return "$0";
     return new Intl.NumberFormat('en-US', { 
       style: 'currency', 
       currency: 'USD',
       minimumFractionDigits: 2 
-    }).format(value);
+    }).format(value || 0);
   };
-
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className="h-16 bg-slate-800/50 rounded-lg animate-pulse" />
-        ))}
-      </div>
-    );
-  }
 
   if (transactions.length === 0) {
     return (
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="rounded-2xl bg-gradient-to-br from-slate-900/80 to-slate-800/50 border border-slate-700/50 backdrop-blur-xl p-12 text-center"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="rounded-2xl bg-slate-900/40 border border-slate-800 p-12 text-center"
       >
-        <div className="w-16 h-16 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center mx-auto mb-4">
-          <Receipt className="w-8 h-8 text-slate-500" />
-        </div>
-        <h3 className="text-xl font-semibold text-white mb-2">No Transactions Yet</h3>
-        <p className="text-slate-400">Your transaction history will appear here.</p>
+        <Receipt className="w-12 h-12 text-slate-700 mx-auto mb-4" />
+        <h3 className="text-lg font-bold text-white">Geen transacties gevonden</h3>
+        <p className="text-slate-500 text-sm">Zodra je trades doet, verschijnen ze hier.</p>
       </motion.div>
     );
   }
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl bg-gradient-to-br from-slate-900/80 to-slate-800/50 border border-slate-700/50 backdrop-blur-xl overflow-hidden"
+      className="rounded-2xl bg-slate-900/40 border border-slate-800 backdrop-blur-sm overflow-hidden"
     >
-      <div className="p-6 border-b border-slate-700/50">
+      {/* Header met simpele zoek-input mock */}
+      <div className="p-6 border-b border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-slate-800 border border-slate-700">
+          <div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/20">
             <Receipt className="w-5 h-5 text-blue-400" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-white">Transaction History</h3>
-            <p className="text-sm text-slate-400">{transactions.length} transactions</p>
+            <h3 className="text-sm font-bold text-white uppercase tracking-widest">Transactiehistorie</h3>
+            <p className="text-[10px] text-slate-500 font-mono uppercase tracking-tight">Totaal: {transactions.length} records</p>
           </div>
+        </div>
+        
+        <div className="relative w-full sm:w-64">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+          <input 
+            type="text" 
+            placeholder="Zoek op ticker of naam..." 
+            className="w-full bg-slate-950/50 border border-slate-700 rounded-lg py-1.5 pl-9 pr-4 text-xs text-slate-300 focus:outline-none focus:border-blue-500/50 transition-colors"
+          />
         </div>
       </div>
 
-      <Table>
-        <TableHeader>
-          <TableRow className="border-slate-700/50 hover:bg-transparent">
-            <TableHead className="text-slate-400 font-medium">Date</TableHead>
-            <TableHead className="text-slate-400 font-medium">Type</TableHead>
-            <TableHead className="text-slate-400 font-medium">Asset</TableHead>
-            <TableHead className="text-slate-400 font-medium text-right">Quantity</TableHead>
-            <TableHead className="text-slate-400 font-medium text-right">Price</TableHead>
-            <TableHead className="text-slate-400 font-medium text-right">Amount</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {transactions.map((tx, index) => {
-            const config = TYPE_CONFIG[tx.type] || TYPE_CONFIG.fee;
-            const Icon = config.icon;
-            
-            return (
-              <TableRow 
-                key={tx.id || index} 
-                className="border-slate-700/50 hover:bg-slate-800/50 transition-colors"
-              >
-                <TableCell className="text-slate-300">
-                  {tx.date ? format(new Date(tx.date), "MMM d, yyyy") : "—"}
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <div className={cn("p-1.5 rounded-lg", config.bg)}>
-                      <Icon className={cn("w-3.5 h-3.5", config.color)} />
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader className="bg-slate-950/30">
+            <TableRow className="border-slate-800 hover:bg-transparent">
+              <TableHead className="text-[10px] font-bold text-slate-500 uppercase">Datum</TableHead>
+              <TableHead className="text-[10px] font-bold text-slate-500 uppercase">Type</TableHead>
+              <TableHead className="text-[10px] font-bold text-slate-500 uppercase">Asset</TableHead>
+              <TableHead className="text-[10px] font-bold text-slate-500 uppercase text-right">Aantal</TableHead>
+              <TableHead className="text-[10px] font-bold text-slate-500 uppercase text-right">Prijs</TableHead>
+              <TableHead className="text-[10px] font-bold text-slate-500 uppercase text-right">Totaal</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {transactions.map((tx, index) => {
+              const config = TYPE_CONFIG[tx.type] || TYPE_CONFIG.fee;
+              const Icon = config.icon;
+              const isPositive = ["sell", "dividend", "deposit"].includes(tx.type);
+              
+              return (
+                <TableRow 
+                  key={tx.id || index} 
+                  className="border-slate-800 hover:bg-slate-800/30 transition-colors group"
+                >
+                  <TableCell className="text-xs font-mono text-slate-400">
+                    {tx.date ? format(new Date(tx.date), "dd MMM yyyy") : "—"}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <div className={cn("p-1.5 rounded-lg", config.bg)}>
+                        <Icon className={cn("w-3.5 h-3.5", config.color)} />
+                      </div>
+                      <span className={cn("text-[10px] font-bold uppercase tracking-tighter", config.color)}>
+                        {config.label}
+                      </span>
                     </div>
-                    <Badge variant="outline" className={cn("border-slate-600", config.color)}>
-                      {config.label}
-                    </Badge>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div>
-                    <p className="font-medium text-white">{tx.asset_name || "—"}</p>
-                    {tx.ticker && (
-                      <p className="text-xs text-slate-500">{tx.ticker}</p>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell className="text-right text-slate-300">
-                  {tx.quantity ? tx.quantity.toLocaleString() : "—"}
-                </TableCell>
-                <TableCell className="text-right text-slate-300">
-                  {tx.price ? formatCurrency(tx.price) : "—"}
-                </TableCell>
-                <TableCell className="text-right">
-                  <span className={cn(
-                    "font-semibold",
-                    ["sell", "dividend", "deposit"].includes(tx.type) ? "text-emerald-400" : "text-white"
-                  )}>
-                    {["sell", "dividend", "deposit"].includes(tx.type) ? "+" : ""}
-                    {formatCurrency(tx.total_amount)}
-                  </span>
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span className="text-xs font-bold text-slate-200 group-hover:text-white transition-colors">
+                        {tx.asset_name || "Cash Overboeking"}
+                      </span>
+                      {tx.ticker && (
+                        <span className="text-[10px] font-mono text-slate-600 uppercase">{tx.ticker}</span>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right text-xs font-mono text-slate-300">
+                    {tx.quantity ? tx.quantity.toLocaleString() : "—"}
+                  </TableCell>
+                  <TableCell className="text-right text-xs font-mono text-slate-300">
+                    {tx.price ? formatCurrency(tx.price) : "—"}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <span className={cn(
+                      "text-xs font-mono font-bold",
+                      isPositive ? "text-emerald-400" : "text-slate-200"
+                    )}>
+                      {isPositive ? "+" : "-"}
+                      {formatCurrency(tx.total_amount)}
+                    </span>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
     </motion.div>
   );
 }

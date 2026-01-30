@@ -1,7 +1,6 @@
 import React, { useState } from "react";
-// We gebruiken nog steeds useQuery voor de structuur, maar zonder de Base44-motor
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   Wallet, 
   RefreshCw,
@@ -11,7 +10,7 @@ import {
   Globe,
   Calendar,
   Castle,
-  Calculator
+  Calculator,
 } from "lucide-react";
 
 // UI Components
@@ -29,161 +28,151 @@ import SandboxTab from "@/components/dashboard/SandboxTab";
 import CalculationsTab from "@/components/dashboard/CalculationsTab";
 import AssetClassDetail from "@/components/dashboard/AssetClassDetail";
 
-// Importeer je eigen duurzame data
+// Data Import
 import { mockPortfolio } from "@/api/mockData";
 
 export default function Dashboard() {
   const [selectedAssetClass, setSelectedAssetClass] = useState(null);
 
-  // Spoor 2: We halen de data nu rechtstreeks uit de mockPortfolio
-  const { data: portfolio, isLoading, refetch } = useQuery({
+  const { data: portfolio, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["portfolio"],
-    queryFn: () => {
-      // Hier zouden we later een echte fetch naar een eigen API kunnen doen
+    queryFn: async () => {
+      // Simuleer een kleine vertraging voor de UX-ervaring
+      await new Promise(resolve => setTimeout(resolve, 600));
       return mockPortfolio;
     },
   });
 
-  // Haal assetClasses veilig uit de portfolio data
   const assetClasses = portfolio?.assetClasses || [];
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-950 p-6 md:p-8">
+      <div className="min-h-screen bg-slate-950 p-6 md:p-10">
         <div className="max-w-7xl mx-auto space-y-8">
-          <Skeleton className="h-12 w-64 bg-slate-800" />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="flex justify-between items-center">
+            <Skeleton className="h-10 w-48 bg-slate-800/50" />
+            <Skeleton className="h-10 w-32 bg-slate-800/50" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {[...Array(4)].map((_, i) => (
-              <Skeleton key={i} className="h-36 bg-slate-800 rounded-2xl" />
+              <Skeleton key={i} className="h-32 bg-slate-800/30 rounded-2xl" />
             ))}
           </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Als er geen data is (bijv. lege mockData)
-  if (!portfolio) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
-        <div className="text-center space-y-4">
-          <Wallet className="w-12 h-12 text-slate-600 mx-auto" />
-          <h2 className="text-xl font-semibold text-white">Geen Portfolio Data</h2>
-          <p className="text-slate-400">Controleer je mockData.js bestand.</p>
+          <Skeleton className="h-[400px] w-full bg-slate-800/20 rounded-3xl" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-      {/* Achtergrond effecten */}
+    <div className="min-h-screen bg-[#020617] text-slate-200 selection:bg-blue-500/30">
+      {/* Aurora Glow Effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-violet-500/5 rounded-full blur-3xl" />
+        <div className="absolute -top-24 -left-24 w-96 h-96 bg-blue-600/10 rounded-full blur-[120px]" />
+        <div className="absolute top-1/2 -right-24 w-80 h-80 bg-violet-600/10 rounded-full blur-[120px]" />
       </div>
 
-      <div className="relative z-10 p-6 md:p-10">
+      <div className="relative z-10 p-4 md:p-10">
         <div className="max-w-7xl mx-auto space-y-8">
           
-          {/* Header - Nu met data uit mockPortfolio */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col md:flex-row md:items-center justify-between gap-4"
-          >
+          {/* Header Section */}
+          <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div>
-              <h1 className="text-3xl font-bold text-white tracking-tight">
-                {portfolio.name || "Mijn Dashboard"}
+              <div className="flex items-center gap-2 mb-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">
+                  Portfolio Engine v2.0
+                </span>
+              </div>
+              <h1 className="text-4xl font-extrabold text-white tracking-tight">
+                {portfolio.name}
               </h1>
-              <p className="text-slate-400 mt-1">
-                Totale Waarde: <span className="text-emerald-400 font-medium">
-                  ${portfolio.totalValue?.toLocaleString()}
-                </span>
-                <span className="ml-4 text-slate-500">
-                  Status: <span className="text-slate-300">Live (Mock)</span>
-                </span>
-              </p>
             </div>
+            
             <Button
               variant="outline"
               onClick={() => refetch()}
-              className="bg-slate-800/50 border-slate-700 hover:bg-slate-700 text-white"
+              disabled={isFetching}
+              className="bg-slate-900/50 border-slate-800 hover:bg-slate-800 text-slate-300 backdrop-blur-md"
             >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Verversen
+              <RefreshCw className={cn("w-4 h-4 mr-2", isFetching && "animate-spin")} />
+              {isFetching ? "Syncing..." : "Update Engine"}
             </Button>
-          </motion.div>
+          </header>
 
-          {/* Tabs Menu */}
-          <Tabs defaultValue="dashboard" className="w-full">
-            <TabsList className="bg-slate-800/40 border border-slate-700/50 p-1 mb-8 overflow-x-auto justify-start">
-              <TabsTrigger value="dashboard" className="text-sm">
-                <LayoutDashboard className="w-4 h-4 mr-2" /> Dashboard
-              </TabsTrigger>
-              <TabsTrigger value="correlations" className="text-sm">
-                <Grid3X3 className="w-4 h-4 mr-2" /> Correlations
-              </TabsTrigger>
-              <TabsTrigger value="markets" className="text-sm">
-                <Globe className="w-4 h-4 mr-2" /> Markets
-              </TabsTrigger>
-              <TabsTrigger value="calendar" className="text-sm">
-                <Calendar className="w-4 h-4 mr-2" /> Calendar
-              </TabsTrigger>
-              <TabsTrigger value="sandbox" className="text-sm">
-                <Castle className="w-4 h-4 mr-2" /> Sandbox
-              </TabsTrigger>
-              <TabsTrigger value="calculations" className="text-sm">
-                <Calculator className="w-4 h-4 mr-2" /> Calculations
-              </TabsTrigger>
-              <TabsTrigger value="transactions" className="text-sm">
-                <History className="w-4 h-4 mr-2" /> Transactions
-              </TabsTrigger>
-            </TabsList>
+          {/* Navigation Tabs */}
+          <Tabs defaultValue="dashboard" className="space-y-8">
+            <div className="sticky top-4 z-30 group">
+              <div className="absolute inset-0 bg-slate-950/50 backdrop-blur-xl rounded-2xl border border-slate-800/50 shadow-2xl transition-all" />
+              <TabsList className="relative bg-transparent h-14 p-1 flex justify-start overflow-x-auto no-scrollbar">
+                <NavTrigger value="dashboard" icon={LayoutDashboard} label="Overview" />
+                <NavTrigger value="correlations" icon={Grid3X3} label="Correlations" />
+                <NavTrigger value="markets" icon={Globe} label="Macro" />
+                <NavTrigger value="sandbox" icon={Castle} label="Sandbox" />
+                <NavTrigger value="transactions" icon={History} label="Logs" />
+                <NavTrigger value="calculations" icon={Calculator} label="Tools" />
+              </TabsList>
+            </div>
 
-            {/* Content per tab */}
-            <TabsContent value="dashboard">
-              <DashboardContent 
-                portfolio={portfolio}
-                assetClasses={assetClasses}
-                setSelectedAssetClass={setSelectedAssetClass}
-              />
-            </TabsContent>
+            {/* Tab Contents */}
+            <AnimatePresence mode="wait">
+              <TabsContent value="dashboard" className="focus-visible:outline-none">
+                <DashboardContent 
+                  portfolio={portfolio}
+                  assetClasses={assetClasses}
+                  setSelectedAssetClass={setSelectedAssetClass}
+                />
+              </TabsContent>
 
-            <TabsContent value="correlations">
-              <CorrelationsTab assetClasses={assetClasses} portfolio={portfolio} />
-            </TabsContent>
+              <TabsContent value="correlations">
+                <CorrelationsTab assetClasses={assetClasses} portfolio={portfolio} />
+              </TabsContent>
 
-            <TabsContent value="markets">
-              <MarketsTab />
-            </TabsContent>
+              <TabsContent value="markets">
+                <MarketsTab />
+              </TabsContent>
 
-            <TabsContent value="calendar">
-              <CalendarTab assetClasses={assetClasses} />
-            </TabsContent>
+              <TabsContent value="sandbox">
+                <SandboxTab portfolio={portfolio} />
+              </TabsContent>
 
-            <TabsContent value="sandbox">
-              <SandboxTab portfolio={portfolio} />
-            </TabsContent>
+              <TabsContent value="transactions">
+                <TransactionHistory transactions={portfolio.transactions} />
+              </TabsContent>
 
-            <TabsContent value="calculations">
-              <CalculationsTab />
-            </TabsContent>
-
-            <TabsContent value="transactions">
-              <TransactionHistory />
-            </TabsContent>
+              <TabsContent value="calculations">
+                <CalculationsTab />
+              </TabsContent>
+            </AnimatePresence>
           </Tabs>
         </div>
       </div>
 
-      {/* Detail Modal */}
-      {selectedAssetClass && (
-        <AssetClassDetail 
-          assetClass={selectedAssetClass} 
-          onClose={() => setSelectedAssetClass(null)} 
-        />
-      )}
+      {/* Detail Modal Overlay */}
+      <AnimatePresence>
+        {selectedAssetClass && (
+          <AssetClassDetail 
+            assetClass={selectedAssetClass} 
+            onClose={() => setSelectedAssetClass(null)} 
+          />
+        )}
+      </AnimatePresence>
     </div>
+  );
+}
+
+// Kleine helper voor de tabs om herhaling te voorkomen
+function NavTrigger({ value, icon: Icon, label }) {
+  return (
+    <TabsTrigger 
+      value={value} 
+      className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-xl px-5 text-xs font-bold uppercase tracking-wider transition-all"
+    >
+      <Icon className="w-4 h-4 mr-2" />
+      <span className="hidden sm:inline">{label}</span>
+    </TabsTrigger>
   );
 }

@@ -1,5 +1,6 @@
+import React from "react";
 import { motion } from "framer-motion";
-import { Target, TrendingUp, Wallet, Activity, BarChart3 } from "lucide-react";
+import { Target, TrendingUp, Wallet, Activity, BarChart3, ShieldAlert } from "lucide-react";
 
 // UI Components & Charts
 import PortfolioMetricCard from "@/components/dashboard/PortfolioMetricCard";
@@ -11,7 +12,11 @@ import AssetAllocationTable from "@/components/dashboard/AssetAllocationTable";
 import GeographicBreakdown from "@/components/dashboard/GeographicBreakdown";
 
 export default function DashboardContent({ portfolio, assetClasses, setSelectedAssetClass }) {
-  // Helper voor mooie bedragen
+  
+  // Guard clause: als portfolio nog niet geladen is
+  if (!portfolio) return null;
+
+  // Helper voor mooie bedragen (K voor duizend, M voor miljoen)
   const formatCurrency = (value) => {
     if (value === undefined || value === null) return "$0";
     if (value >= 1000000) return `$${(value / 1000000).toFixed(2)}M`;
@@ -20,15 +25,17 @@ export default function DashboardContent({ portfolio, assetClasses, setSelectedA
   };
 
   return (
-    <div className="space-y-8">
-      {/* 1. Key Metrics - Nu gekoppeld aan mockData velden */}
+    <div className="space-y-8 pb-12">
+      
+      {/* 1. Top Row: Key Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <PortfolioMetricCard
           title="Totaal Vermogen"
           value={formatCurrency(portfolio.totalValue)}
           icon={Wallet}
           trend={portfolio.dailyChangePercent >= 0 ? "up" : "down"}
-          trendValue={`${portfolio.dailyChangePercent >= 0 ? '+' : ''}${portfolio.dailyChangePercent?.toFixed(2)}% vandaag`}
+          trendValue={`${portfolio.dailyChangePercent >= 0 ? '+' : ''}${portfolio.dailyChangePercent?.toFixed(2)}%`}
+          subtitle="Huidige liquidatiewaarde"
           delay={0}
         />
         <PortfolioMetricCard
@@ -36,75 +43,66 @@ export default function DashboardContent({ portfolio, assetClasses, setSelectedA
           value={`${portfolio.ytdReturn >= 0 ? '+' : ''}${portfolio.ytdReturn?.toFixed(2) || 0}%`}
           icon={TrendingUp}
           trend={portfolio.ytdReturn >= 0 ? "up" : "down"}
-          subtitle="Year to date"
+          subtitle="Rendement sinds 1 jan"
           delay={0.1}
         />
         <PortfolioMetricCard
-          title="Portfolio Beta"
+          title="Beta (β)"
           value={portfolio.riskMetrics?.beta?.toFixed(2) || "1.00"}
           icon={Activity}
-          subtitle="vs Benchmark"
+          subtitle="Marktgevoeligheid"
+          trend={portfolio.riskMetrics?.beta > 1.2 ? "down" : "up"} // Hogere beta = lager 'veiligheid' sentiment
           delay={0.2}
         />
         <PortfolioMetricCard
-          title="Volatiliteit (σ)"
-          value={`${portfolio.riskMetrics?.volatility?.toFixed(2) || "0"}%`}
-          icon={BarChart3}
-          subtitle="Op jaarbasis"
+          title="Max Drawdown"
+          value={`${portfolio.riskMetrics?.maxDrawdown?.toFixed(1) || "0"}%`}
+          icon={ShieldAlert}
+          subtitle="Grootste daling piek-dal"
           delay={0.3}
         />
       </div>
 
-      {/* 2. De Tabel met Asset Classes */}
-      <AssetAllocationTable 
-        assetClasses={assetClasses} 
-        onSelectAsset={setSelectedAssetClass}
+      {/* 2. Main Performance Chart (Full Width) */}
+      <PerformanceChart 
+        data={portfolio.performanceHistory} 
+        benchmarkName="MSCI World Index"
       />
 
-      {/* 3. Geografische Spreiding */}
-      <GeographicBreakdown assetClasses={assetClasses} />
-
-      {/* 4. Risico Analyse (Gauges) */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.35 }}
-        className="rounded-2xl bg-slate-900/50 border border-slate-700/50 backdrop-blur-xl p-6"
-      >
-        <div className="flex items-center gap-3 mb-8">
-          <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
-            <Target className="w-5 h-5 text-blue-400" />
-          </div>
-          <h3 className="text-lg font-semibold text-white">Risico Analyse</h3>
+      {/* 3. Asset Allocation & Management */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div className="xl:col-span-2">
+          <AssetAllocationTable 
+            assetClasses={assetClasses} 
+            onSelectAsset={setSelectedAssetClass}
+          />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+        <div className="space-y-6">
           <RiskGauge 
             label="Portfolio Beta" 
             value={portfolio.riskMetrics?.beta || 0} 
             maxValue={2}
-            description="Gevoeligheid t.o.v. de markt. β=1 beweegt gelijk met de index."
+            description="β > 1: Beweeglijker dan de markt. β < 1: Defensiever dan de markt."
           />
           <RiskGauge 
-            label="Volatiliteit" 
+            label="Jaarlijkse Volatiliteit" 
             value={portfolio.riskMetrics?.volatility || 0} 
-            maxValue={40}
+            maxValue={50}
             unit="%"
-            description="De beweeglijkheid van je portfolio. Een lagere score is stabieler."
+            description="De spreiding van rendementen. Hoe lager, hoe stabieler de groei."
           />
         </div>
-      </motion.div>
+      </div>
 
-      {/* 5. Charts Sectie */}
+      {/* 4. Diversificatie Analyse */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <SectorChart sectors={portfolio.sectorAllocation} />
         <CurrencyBreakdown currencies={portfolio.currencyAllocation} />
       </div>
 
-      {/* 6. Performance Historie (De grote grafiek) */}
-      <PerformanceChart 
-        data={portfolio.performanceHistory} 
-        benchmarkName="Global Benchmark"
-      />
+      {/* 5. Wereldkaart / Geografisch (Brede Sectie) */}
+      <GeographicBreakdown assetClasses={assetClasses} />
+      
     </div>
   );
 }

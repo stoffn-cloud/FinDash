@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { cn } from "@/lib/utils";
 
 const COLORS = [
   "#3B82F6", // blue
@@ -15,11 +16,16 @@ const COLORS = [
 const CustomTooltip = ({ active, payload }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 shadow-xl">
-        <p className="text-white font-medium">{payload[0].payload.name}</p>
-        <p className="text-slate-400 text-sm">
-          {payload[0].value.toFixed(1)}% · ${(payload[0].payload.value / 1000).toFixed(0)}K
+      <div className="bg-slate-900/90 border border-slate-700 backdrop-blur-md rounded-xl px-4 py-3 shadow-2xl">
+        <p className="text-white font-bold text-xs uppercase tracking-widest mb-1">
+          {payload[0].payload.name}
         </p>
+        <div className="flex items-center gap-2">
+          <span className="text-emerald-400 font-mono font-bold">
+            {payload[0].value.toFixed(1)}%
+          </span>
+          <span className="text-slate-500 text-[10px]">van totaal</span>
+        </div>
       </div>
     );
   }
@@ -29,38 +35,40 @@ const CustomTooltip = ({ active, payload }) => {
 export default function SectorChart({ sectors }) {
   if (!sectors || sectors.length === 0) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.2 }}
-        className="rounded-2xl bg-gradient-to-br from-slate-900/80 to-slate-800/50 border border-slate-700/50 backdrop-blur-xl p-6 h-full"
-      >
-        <h3 className="text-lg font-semibold text-white mb-6">Sector Allocation</h3>
-        <p className="text-slate-400">No sector data available</p>
-      </motion.div>
+      <div className="rounded-2xl bg-slate-900/40 border border-slate-800 p-6 flex items-center justify-center h-[300px]">
+        <p className="text-slate-500 italic text-sm font-medium">Geen sector data beschikbaar</p>
+      </div>
     );
   }
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.2 }}
-      className="rounded-2xl bg-gradient-to-br from-slate-900/80 to-slate-800/50 border border-slate-700/50 backdrop-blur-xl p-6"
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="rounded-2xl bg-slate-900/40 border border-slate-800 p-6 backdrop-blur-sm"
     >
-      <h3 className="text-lg font-semibold text-white mb-4">Sector Allocation</h3>
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-sm font-bold text-white uppercase tracking-[0.15em]">Sector Allocatie</h3>
+        <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+      </div>
       
-      <div className="flex items-center gap-6">
-        <div className="w-48 h-48">
+      <div className="flex flex-col sm:flex-row items-center gap-8">
+        <div className="w-48 h-48 relative shrink-0">
+          {/* Het "Gat" in het midden vullen met informatie */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center z-0">
+            <span className="text-[10px] font-bold text-slate-500 uppercase">Sectoren</span>
+            <span className="text-xl font-mono font-bold text-white">{sectors.length}</span>
+          </div>
+
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
                 data={sectors}
                 cx="50%"
                 cy="50%"
-                innerRadius={50}
-                outerRadius={75}
-                paddingAngle={2}
+                innerRadius={60}
+                outerRadius={85}
+                paddingAngle={4}
                 dataKey="percentage"
                 stroke="none"
               >
@@ -68,32 +76,53 @@ export default function SectorChart({ sectors }) {
                   <Cell 
                     key={`cell-${index}`} 
                     fill={COLORS[index % COLORS.length]}
-                    className="hover:opacity-80 transition-opacity cursor-pointer"
+                    className="hover:brightness-125 transition-all cursor-pointer outline-none"
                   />
                 ))}
               </Pie>
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<CustomTooltip />} cursor={false} />
             </PieChart>
           </ResponsiveContainer>
         </div>
         
-        <div className="flex-1 space-y-2 max-h-48 overflow-y-auto pr-2">
+        <div className="flex-1 w-full space-y-1.5 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
           {sectors.map((sector, index) => (
-            <div key={sector.name} className="flex items-center justify-between py-1">
+            <div 
+              key={sector.name} 
+              className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-slate-800/40 transition-colors group"
+            >
               <div className="flex items-center gap-3">
                 <div 
-                  className="w-3 h-3 rounded-full" 
+                  className="w-2 h-2 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)]" 
                   style={{ backgroundColor: COLORS[index % COLORS.length] }}
                 />
-                <span className="text-sm text-slate-300">{sector.name}</span>
+                <span className="text-xs font-medium text-slate-400 group-hover:text-slate-200 transition-colors tracking-tight">
+                  {sector.name}
+                </span>
               </div>
-              <span className="text-sm font-medium text-white">
+              <span className="text-[11px] font-mono font-bold text-white">
                 {sector.percentage.toFixed(1)}%
               </span>
             </div>
           ))}
         </div>
       </div>
+
+      <style jsx>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #1e293b;
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #334155;
+        }
+      `}</style>
     </motion.div>
   );
 }
