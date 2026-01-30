@@ -13,6 +13,7 @@ import {
   ComposedChart
 } from "recharts";
 import { format, parseISO } from "date-fns";
+import { cn } from "@/lib/utils";
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {

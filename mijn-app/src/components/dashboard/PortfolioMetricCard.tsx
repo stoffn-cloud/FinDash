@@ -1,6 +1,17 @@
 import { motion } from "framer-motion";
-import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+interface PortfolioMetricCardProps {
+  title: string;
+  value: string;
+  subtitle?: string;
+  icon?: LucideIcon;
+  trend?: "up" | "down" | "neutral";
+  trendValue?: string;
+  className?: string;
+  delay?: number;
+}
 
 export default function PortfolioMetricCard({ 
   title, 
@@ -11,7 +22,7 @@ export default function PortfolioMetricCard({
   trendValue,
   className,
   delay = 0 
-}) {
+}: PortfolioMetricCardProps) {
   const isPositive = trend === 'up';
   const isNegative = trend === 'down';
 
@@ -45,7 +56,7 @@ export default function PortfolioMetricCard({
             </h3>
             
             <div className="flex items-center gap-2">
-              {trendValue && (
+              {trendValue && !trendValue.includes("undefined") && (
                 <div className={cn(
                   "flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold border",
                   isPositive && "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",

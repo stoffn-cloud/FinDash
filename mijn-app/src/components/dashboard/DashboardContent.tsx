@@ -11,7 +11,7 @@ import RiskGauge from "@/components/dashboard/RiskGauge";
 import AssetAllocationTable from "@/components/dashboard/AssetAllocationTable";
 import GeographicBreakdown from "@/components/dashboard/GeographicBreakdown";
 
-export default function DashboardContent({ portfolio, assetClasses, setSelectedAssetClass }) {
+export default function DashboardContent({ portfolio, assetClasses, onSelectAsset }) {
   
   // Guard clause: als portfolio nog niet geladen is
   if (!portfolio) return null;
@@ -74,7 +74,7 @@ export default function DashboardContent({ portfolio, assetClasses, setSelectedA
         <div className="xl:col-span-2">
           <AssetAllocationTable 
             assetClasses={assetClasses} 
-            onSelectAsset={setSelectedAssetClass}
+            onSelectAsset={onSelectAsset}
           />
         </div>
         <div className="space-y-6">

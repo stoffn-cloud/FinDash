@@ -32,7 +32,18 @@ const CustomTooltip = ({ active, payload }) => {
   return null;
 };
 
-export default function SectorChart({ sectors }) {
+interface Sector {
+  name: string;
+  value?: number;
+  percentage?: number;
+  color?: string;
+}
+
+interface SectorChartProps {
+  sectors: Sector[];
+}
+
+export default function SectorChart({ sectors }: SectorChartProps) {
   if (!sectors || sectors.length === 0) {
     return (
       <div className="rounded-2xl bg-slate-900/40 border border-slate-800 p-6 flex items-center justify-center h-[300px]">
@@ -69,7 +80,7 @@ export default function SectorChart({ sectors }) {
                 innerRadius={60}
                 outerRadius={85}
                 paddingAngle={4}
-                dataKey="percentage"
+                dataKey={(s) => s.percentage ?? s.value ?? 0}
                 stroke="none"
               >
                 {sectors.map((entry, index) => (
@@ -101,7 +112,7 @@ export default function SectorChart({ sectors }) {
                 </span>
               </div>
               <span className="text-[11px] font-mono font-bold text-white">
-                {sector.percentage.toFixed(1)}%
+                {(sector.percentage ?? sector.value ?? 0).toFixed(1)}%
               </span>
             </div>
           ))}

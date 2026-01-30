@@ -1,7 +1,15 @@
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
-export default function RiskGauge({ label, value, maxValue = 2, unit = "", description }) {
+interface RiskGaugeProps {
+  label: string;
+  value: number;
+  maxValue?: number;
+  unit?: string;
+  description?: string;
+}
+
+export default function RiskGauge({ label, value, maxValue = 2, unit = "", description }: RiskGaugeProps) {
   const percentage = Math.min((value / maxValue) * 100, 100);
   
   const getRiskColor = () => {
