@@ -11,11 +11,30 @@ import { Badge } from "@/components/ui/badge";
 import { ChevronRight, TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+interface AssetClass {
+  id?: string;
+  name: string;
+  allocation_percent?: number;
+  current_value?: number;
+  expected_return?: number;
+  volatility?: number;
+  ytd_return?: number;
+  color?: string;
+}
+
+interface AssetAllocationTableProps {
+  assetClasses?: AssetClass[];
+  onSelectAsset?: (asset: AssetClass) => void;
+}
+
 /**
  * Dit component is nu volledig onafhankelijk van Base44.
  * Het verwacht een array 'assetClasses' met standaard eigenschappen.
  */
-export default function AssetAllocationTable({ assetClasses = [], onSelectAsset }) {
+export default function AssetAllocationTable({
+  assetClasses = [],
+  onSelectAsset
+}: AssetAllocationTableProps) {
   // 1. Veiligheidscheck: als er geen data is, toon een nette lege staat
   if (!assetClasses || assetClasses.length === 0) {
     return (
@@ -29,7 +48,8 @@ export default function AssetAllocationTable({ assetClasses = [], onSelectAsset 
   // 2. Berekeningen op basis van de meegegeven props
   const totalValue = assetClasses.reduce((sum, ac) => sum + (ac.current_value || 0), 0);
 
-  const formatCurrency = (value) => {
+  const formatCurrency = (value?: number) => {
+    if (value === undefined || value === null || isNaN(value)) return "$0";
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
@@ -90,26 +110,26 @@ export default function AssetAllocationTable({ assetClasses = [], onSelectAsset 
                 </div>
               </TableCell>
               <TableCell className="text-right text-slate-300">
-                {ac.allocation_percent?.toFixed(1)}%
+                {(ac.allocation_percent || 0).toFixed(1)}%
               </TableCell>
               <TableCell className="text-right text-white font-medium">
                 {formatCurrency(ac.current_value)}
               </TableCell>
               <TableCell className={cn(
                 "text-right font-medium",
-                ac.expected_return >= 0 ? "text-emerald-400" : "text-rose-400"
+                (ac.expected_return ?? 0) >= 0 ? "text-emerald-400" : "text-rose-400"
               )}>
-                {ac.expected_return > 0 ? '+' : ''}{ac.expected_return?.toFixed(1)}%
+                {(ac.expected_return ?? 0) > 0 ? '+' : ''}{(ac.expected_return ?? 0).toFixed(1)}%
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-1">
-                  {ac.ytd_return >= 0 ? (
+                  {(ac.ytd_return ?? 0) >= 0 ? (
                     <TrendingUp className="w-3 h-3 text-emerald-400" />
                   ) : (
                     <TrendingDown className="w-3 h-3 text-rose-400" />
                   )}
-                  <span className={ac.ytd_return >= 0 ? "text-emerald-400" : "text-rose-400"}>
-                    {ac.ytd_return?.toFixed(1)}%
+                  <span className={(ac.ytd_return ?? 0) >= 0 ? "text-emerald-400" : "text-rose-400"}>
+                    {(ac.ytd_return ?? 0).toFixed(1)}%
                   </span>
                 </div>
               </TableCell>
