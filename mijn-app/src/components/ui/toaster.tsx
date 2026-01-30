@@ -1,6 +1,6 @@
 "use client"
 
-import { useToast } from "@/hooks/use-toast" // Let op: check of je hook in /hooks of /components staat
+import { useToast, type Toast as ToastType } from "@/hooks/use-toast"
 import {
   Toast,
   ToastClose,
@@ -15,8 +15,8 @@ export function Toaster() {
 
   return (
     <ToastProvider swipeDirection="right">
-      {toasts.map(function ({ id, title, description, action, ...props }) {
-        return (
+      {toasts.map(
+        ({ id, title, description, action, ...props }: ToastType) => (
           <Toast key={id} {...props} className="mb-2">
             <div className="flex flex-col gap-0.5">
               {title && <ToastTitle>{title}</ToastTitle>}
@@ -28,7 +28,7 @@ export function Toaster() {
             <ToastClose />
           </Toast>
         )
-      })}
+      )}
       <ToastViewport />
     </ToastProvider>
   )

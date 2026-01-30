@@ -3,9 +3,13 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 
-const Textarea = React.forwardRef(({ className, ...props }, ref) => {
+const Textarea = React.forwardRef<
+  HTMLTextAreaElement,
+  React.TextareaHTMLAttributes<HTMLTextAreaElement>
+>(({ className, ...props }, ref) => {
   return (
     <textarea
+      ref={ref}
       className={cn(
         "flex min-h-[100px] w-full rounded-xl border border-slate-800 bg-slate-950/50 px-4 py-3 text-sm text-slate-200 shadow-inner transition-all",
         "placeholder:text-slate-600 font-mono tracking-tight",
@@ -14,10 +18,11 @@ const Textarea = React.forwardRef(({ className, ...props }, ref) => {
         "scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent",
         className
       )}
-      ref={ref}
-      {...props} />
+      {...props}
+    />
   )
 })
+
 Textarea.displayName = "Textarea"
 
 export { Textarea }
