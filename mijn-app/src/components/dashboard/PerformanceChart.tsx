@@ -1,27 +1,52 @@
 import { motion } from "framer-motion";
 import { 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+  ComposedChart,
+  Line,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   Legend,
-  Area,
-  AreaChart,
-  ComposedChart
+  TooltipProps
 } from "recharts";
 import { format, parseISO } from "date-fns";
+import { cn } from "@/lib/utils";
 
-const CustomTooltip = ({ active, payload, label }) => {
+// ---------------------- TYPES ----------------------
+interface PerformancePoint {
+  date: string; // ISO date string
+  portfolioValue: number;
+  benchmarkValue: number;
+}
+
+interface NormalizedPoint {
+  date: string;
+  Portfolio: number;
+  [key: string]: number | string;
+}
+
+interface CustomTooltipPayload {
+  name: string;
+  value: number;
+  color: string;
+}
+
+// ---------------------- CUSTOM TOOLTIP ----------------------
+const CustomTooltip = ({
+  active,
+  payload,
+  label
+}: TooltipProps<number, string>) => {
   if (active && payload && payload.length) {
+    const data = payload as CustomTooltipPayload[];
     return (
       <div className="bg-slate-900/95 border border-slate-700 backdrop-blur-md rounded-xl px-4 py-3 shadow-2xl">
         <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-2">
           {format(parseISO(label), "dd MMM yyyy")}
         </p>
-        {payload.map((entry, index) => (
+        {data.map((entry, index) => (
           <div key={index} className="flex items-center justify-between gap-8 mb-1 last:mb-0">
             <div className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: entry.color }} />
@@ -38,7 +63,16 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
-export default function PerformanceChart({ data = [], benchmarkName = "Benchmark" }) {
+// ---------------------- PERFORMANCE CHART ----------------------
+interface PerformanceChartProps {
+  data?: PerformancePoint[];
+  benchmarkName?: string;
+}
+
+export default function PerformanceChart({
+  data = [],
+  benchmarkName = "Benchmark",
+}: PerformanceChartProps) {
   if (!data || data.length === 0) {
     return (
       <div className="h-80 rounded-2xl bg-slate-900/50 border border-slate-700/50 flex items-center justify-center">
@@ -47,26 +81,28 @@ export default function PerformanceChart({ data = [], benchmarkName = "Benchmark
     );
   }
 
-  // Mapping: we gebruiken nu portfolioValue en benchmarkValue (CamelCase)
-  const startPortfolio = data[0]?.portfolioValue || 1;
-  const startBenchmark = data[0]?.benchmarkValue || 1;
-  
-  const normalizedData = data.map(item => ({
+  // ---------------------- NORMALISATIE ----------------------
+  const startPortfolio = data[0].portfolioValue || 1;
+  const startBenchmark = data[0].benchmarkValue || 1;
+
+  const normalizedData: NormalizedPoint[] = data.map(item => ({
     date: item.date,
     Portfolio: ((item.portfolioValue - startPortfolio) / startPortfolio) * 100,
     [benchmarkName]: ((item.benchmarkValue - startBenchmark) / startBenchmark) * 100,
   }));
 
-  const lastPortfolio = normalizedData[normalizedData.length - 1]?.Portfolio || 0;
-  const lastBenchmark = normalizedData[normalizedData.length - 1]?.[benchmarkName] || 0;
+  const lastPortfolio = normalizedData[normalizedData.length - 1].Portfolio || 0;
+  const lastBenchmark = normalizedData[normalizedData.length - 1][benchmarkName] as number || 0;
   const alpha = lastPortfolio - lastBenchmark;
 
+  // ---------------------- RENDER ----------------------
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="rounded-2xl bg-slate-900/50 border border-slate-700/50 p-6 backdrop-blur-sm"
     >
+      {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
           <h3 className="text-lg font-bold text-white tracking-tight">Performance vs Markt</h3>
@@ -79,7 +115,8 @@ export default function PerformanceChart({ data = [], benchmarkName = "Benchmark
           </p>
         </div>
       </div>
-      
+
+      {/* Chart */}
       <div className="h-80 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={normalizedData}>
@@ -91,7 +128,7 @@ export default function PerformanceChart({ data = [], benchmarkName = "Benchmark
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
             <XAxis 
-              dataKey="date" 
+              dataKey="date"
               stroke="#475569"
               fontSize={10}
               tickLine={false}
@@ -100,7 +137,7 @@ export default function PerformanceChart({ data = [], benchmarkName = "Benchmark
               interval="preserveStartEnd"
               padding={{ left: 10, right: 10 }}
             />
-            <YAxis 
+            <YAxis
               stroke="#475569"
               fontSize={10}
               tickLine={false}
@@ -108,26 +145,21 @@ export default function PerformanceChart({ data = [], benchmarkName = "Benchmark
               tickFormatter={(val) => `${val}%`}
             />
             <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#334155', strokeWidth: 1 }} />
-            <Legend 
-              verticalAlign="top" 
-              align="right"
-              iconType="circle"
-              wrapperStyle={{ paddingBottom: '20px', fontSize: '12px' }}
-            />
+            <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ paddingBottom: '20px', fontSize: '12px' }} />
             
-            {/* Benchmark Lijn (Gestippeld) */}
-            <Line 
+            {/* Benchmark lijn */}
+            <Line
               name={benchmarkName}
-              type="monotone" 
+              type="monotone"
               dataKey={benchmarkName}
-              stroke="#64748b" 
+              stroke="#64748b"
               strokeWidth={1.5}
               strokeDasharray="4 4"
               dot={false}
               activeDot={false}
             />
 
-            {/* Portfolio Area + Lijn */}
+            {/* Portfolio area + lijn */}
             <Area
               name="Jouw Portfolio"
               type="monotone"

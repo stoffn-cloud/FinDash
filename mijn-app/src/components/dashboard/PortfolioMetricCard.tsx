@@ -1,26 +1,40 @@
 import { motion } from "framer-motion";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { LucideIcon } from "lucide-react";
 
-export default function PortfolioMetricCard({ 
-  title, 
-  value, 
-  subtitle, 
-  icon: Icon, 
-  trend, 
+// ---------------------- TYPES ----------------------
+interface PortfolioMetricCardProps {
+  title: string;
+  value?: string | number;
+  subtitle?: string;
+  icon?: LucideIcon; // icon component
+  trend?: "up" | "down" | "neutral";
+  trendValue?: string | number;
+  className?: string;
+  delay?: number;
+}
+
+// ---------------------- COMPONENT ----------------------
+export default function PortfolioMetricCard({
+  title,
+  value,
+  subtitle,
+  icon: Icon,
+  trend = "neutral",
   trendValue,
   className,
-  delay = 0 
-}) {
-  const isPositive = trend === 'up';
-  const isNegative = trend === 'down';
+  delay = 0,
+}: PortfolioMetricCardProps) {
+  const isPositive = trend === "up";
+  const isNegative = trend === "down";
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay }}
-      whileHover={{ y: -4 }} // Subtiele lift bij hover
+      whileHover={{ y: -4 }}
       className={cn(
         "relative overflow-hidden rounded-2xl bg-slate-900/40",
         "border border-slate-800 backdrop-blur-md p-6",
@@ -30,7 +44,7 @@ export default function PortfolioMetricCard({
     >
       {/* Achtergrond Glow Effect */}
       <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-[60px] group-hover:bg-blue-500/20 transition-colors" />
-      
+
       <div className="flex items-start justify-between relative z-10">
         <div className="space-y-4">
           <div className="flex items-center gap-2">
@@ -41,23 +55,29 @@ export default function PortfolioMetricCard({
 
           <div className="space-y-1">
             <h3 className="text-3xl font-mono font-bold text-white tracking-tighter">
-              {value || "---"}
+              {value ?? "---"}
             </h3>
-            
+
             <div className="flex items-center gap-2">
-              {trendValue && (
-                <div className={cn(
-                  "flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold border",
-                  isPositive && "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-                  isNegative && "bg-rose-500/10 text-rose-400 border-rose-500/20",
-                  !isPositive && !isNegative && "bg-slate-800 text-slate-400 border-slate-700"
-                )}>
+              {trendValue !== undefined && (
+                <div
+                  className={cn(
+                    "flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold border",
+                    isPositive &&
+                      "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+                    isNegative &&
+                      "bg-rose-500/10 text-rose-400 border-rose-500/20",
+                    !isPositive && !isNegative &&
+                      "bg-slate-800 text-slate-400 border-slate-700"
+                  )}
+                >
                   {isPositive && <TrendingUp className="w-3 h-3" />}
                   {isNegative && <TrendingDown className="w-3 h-3" />}
                   {!isPositive && !isNegative && <Minus className="w-3 h-3" />}
-                  <span>{isPositive && "+"}{trendValue}</span>
+                  <span>{isPositive ? "+" : ""}{trendValue}</span>
                 </div>
               )}
+
               {subtitle && (
                 <span className="text-[11px] text-slate-500 font-medium">
                   {subtitle}
@@ -66,7 +86,7 @@ export default function PortfolioMetricCard({
             </div>
           </div>
         </div>
-        
+
         {Icon && (
           <div className="p-2.5 rounded-xl bg-slate-800/50 border border-slate-700/50 group-hover:border-blue-500/50 group-hover:bg-blue-500/10 transition-all">
             <Icon className="w-5 h-5 text-blue-400 group-hover:text-blue-300" />

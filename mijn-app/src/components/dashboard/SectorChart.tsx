@@ -1,7 +1,20 @@
 import { motion } from "framer-motion";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, TooltipProps } from "recharts";
 import { cn } from "@/lib/utils";
 
+// ---------------------- TYPES ----------------------
+interface Sector {
+  name: string;
+  percentage: number;
+}
+
+interface SectorChartProps {
+  sectors: Sector[];
+}
+
+interface CustomTooltipProps extends TooltipProps<number, string> {}
+
+// ---------------------- COLORS ----------------------
 const COLORS = [
   "#3B82F6", // blue
   "#10B981", // emerald
@@ -13,16 +26,18 @@ const COLORS = [
   "#6366F1", // indigo
 ];
 
-const CustomTooltip = ({ active, payload }) => {
-  if (active && payload && payload.length) {
+// ---------------------- CUSTOM TOOLTIP ----------------------
+const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
+  if (active && payload && payload.length > 0) {
+    const data = payload[0].payload as Sector; // type assertion
     return (
       <div className="bg-slate-900/90 border border-slate-700 backdrop-blur-md rounded-xl px-4 py-3 shadow-2xl">
         <p className="text-white font-bold text-xs uppercase tracking-widest mb-1">
-          {payload[0].payload.name}
+          {data.name}
         </p>
         <div className="flex items-center gap-2">
           <span className="text-emerald-400 font-mono font-bold">
-            {payload[0].value.toFixed(1)}%
+            {data.percentage.toFixed(1)}%
           </span>
           <span className="text-slate-500 text-[10px]">van totaal</span>
         </div>
@@ -32,7 +47,8 @@ const CustomTooltip = ({ active, payload }) => {
   return null;
 };
 
-export default function SectorChart({ sectors }) {
+// ---------------------- COMPONENT ----------------------
+export default function SectorChart({ sectors }: SectorChartProps) {
   if (!sectors || sectors.length === 0) {
     return (
       <div className="rounded-2xl bg-slate-900/40 border border-slate-800 p-6 flex items-center justify-center h-[300px]">
@@ -51,7 +67,7 @@ export default function SectorChart({ sectors }) {
         <h3 className="text-sm font-bold text-white uppercase tracking-[0.15em]">Sector Allocatie</h3>
         <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
       </div>
-      
+
       <div className="flex flex-col sm:flex-row items-center gap-8">
         <div className="w-48 h-48 relative shrink-0">
           {/* Het "Gat" in het midden vullen met informatie */}
@@ -84,7 +100,7 @@ export default function SectorChart({ sectors }) {
             </PieChart>
           </ResponsiveContainer>
         </div>
-        
+
         <div className="flex-1 w-full space-y-1.5 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
           {sectors.map((sector, index) => (
             <div 

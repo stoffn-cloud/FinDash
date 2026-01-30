@@ -17,17 +17,39 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, TooltipProps } from "recharts";
 import { cn } from "@/lib/utils";
+import { AssetClass } from "./AssetAllocationTable"; // Importeer de interface die we eerder maakten
+
+// 1. Definieer de interface voor een Holding
+interface Holding {
+  name: string;
+  ticker: string;
+  weight: number;
+  value: number;
+  return_ytd: number;
+}
+
+// 2. Breid de AssetClass uit met holdings (als dat nog niet gebeurd was)
+interface ExtendedAssetClass extends AssetClass {
+  holdings?: Holding[];
+  volatility?: number;
+}
+
+interface AssetClassDetailProps {
+  assetClass: ExtendedAssetClass | null;
+  onClose: () => void;
+}
 
 const HOLDING_COLORS = [
   "#3B82F6", "#10B981", "#8B5CF6", "#F59E0B", "#EC4899", 
   "#06B6D4", "#F97316", "#6366F1", "#84CC16", "#14B8A6"
 ];
 
-const CustomTooltip = ({ active, payload }) => {
+// 3. Fix de 'any' error door TooltipProps te gebruiken van recharts
+const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
   if (active && payload && payload.length) {
-    const data = payload[0].payload;
+    const data = payload[0].payload as Holding;
     return (
       <div className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 shadow-xl">
         <p className="text-white font-medium">{data.name}</p>
@@ -41,13 +63,12 @@ const CustomTooltip = ({ active, payload }) => {
   return null;
 };
 
-export default function AssetClassDetail({ assetClass, onClose }) {
+export default function AssetClassDetail({ assetClass, onClose }: AssetClassDetailProps) {
   if (!assetClass) return null;
 
-  // Gebruik de holdings uit de assetClass, of een lege array als ze er niet zijn
   const holdings = assetClass.holdings || [];
   
-  const formatCurrency = (value) => {
+  const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
@@ -55,7 +76,6 @@ export default function AssetClassDetail({ assetClass, onClose }) {
     }).format(value || 0);
   };
 
-  // Veilige berekening voor Sharpe Ratio (gebruikt 4% risk-free rate als voorbeeld)
   const sharpeRatio = assetClass.volatility 
     ? ((assetClass.expected_return - 4) / assetClass.volatility).toFixed(2) 
     : "0.00";

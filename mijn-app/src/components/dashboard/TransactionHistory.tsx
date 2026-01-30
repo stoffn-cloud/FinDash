@@ -20,8 +20,29 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
+// ---------------------- TYPES ----------------------
+type TransactionType = "buy" | "sell" | "dividend" | "deposit" | "withdrawal" | "fee";
+
+interface Transaction {
+  id?: string | number;
+  date?: string;
+  type: TransactionType;
+  asset_name?: string;
+  ticker?: string;
+  quantity?: number;
+  price?: number;
+  total_amount: number;
+}
+
 // Configuratie voor de verschillende transactietypes
-const TYPE_CONFIG = {
+interface TypeConfig {
+  icon: React.ComponentType<{ className?: string }>;
+  color: string;
+  bg: string;
+  label: string;
+}
+
+const TYPE_CONFIG: Record<TransactionType, TypeConfig> = {
   buy: { icon: ArrowDownRight, color: "text-blue-400", bg: "bg-blue-500/10", label: "Aankoop" },
   sell: { icon: ArrowUpRight, color: "text-emerald-400", bg: "bg-emerald-500/10", label: "Verkoop" },
   dividend: { icon: DollarSign, color: "text-amber-400", bg: "bg-amber-500/10", label: "Dividend" },
@@ -30,14 +51,19 @@ const TYPE_CONFIG = {
   fee: { icon: Receipt, color: "text-slate-400", bg: "bg-slate-500/10", label: "Kosten" },
 };
 
-export default function TransactionHistory({ transactions = [] }) {
-  
-  const formatCurrency = (value) => {
+// ---------------------- COMPONENT ----------------------
+interface TransactionHistoryProps {
+  transactions?: Transaction[];
+}
+
+export default function TransactionHistory({ transactions = [] }: TransactionHistoryProps) {
+
+  const formatCurrency = (value?: number) => {
     return new Intl.NumberFormat('en-US', { 
       style: 'currency', 
       currency: 'USD',
       minimumFractionDigits: 2 
-    }).format(value || 0);
+    }).format(value ?? 0);
   };
 
   if (transactions.length === 0) {
@@ -60,7 +86,7 @@ export default function TransactionHistory({ transactions = [] }) {
       animate={{ opacity: 1, y: 0 }}
       className="rounded-2xl bg-slate-900/40 border border-slate-800 backdrop-blur-sm overflow-hidden"
     >
-      {/* Header met simpele zoek-input mock */}
+      {/* Header met zoek-input mock */}
       <div className="p-6 border-b border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/20">
@@ -68,7 +94,9 @@ export default function TransactionHistory({ transactions = [] }) {
           </div>
           <div>
             <h3 className="text-sm font-bold text-white uppercase tracking-widest">Transactiehistorie</h3>
-            <p className="text-[10px] text-slate-500 font-mono uppercase tracking-tight">Totaal: {transactions.length} records</p>
+            <p className="text-[10px] text-slate-500 font-mono uppercase tracking-tight">
+              Totaal: {transactions.length} records
+            </p>
           </div>
         </div>
         
@@ -102,7 +130,7 @@ export default function TransactionHistory({ transactions = [] }) {
               
               return (
                 <TableRow 
-                  key={tx.id || index} 
+                  key={tx.id ?? index} 
                   className="border-slate-800 hover:bg-slate-800/30 transition-colors group"
                 >
                   <TableCell className="text-xs font-mono text-slate-400">
@@ -129,7 +157,7 @@ export default function TransactionHistory({ transactions = [] }) {
                     </div>
                   </TableCell>
                   <TableCell className="text-right text-xs font-mono text-slate-300">
-                    {tx.quantity ? tx.quantity.toLocaleString() : "—"}
+                    {tx.quantity?.toLocaleString() ?? "—"}
                   </TableCell>
                   <TableCell className="text-right text-xs font-mono text-slate-300">
                     {tx.price ? formatCurrency(tx.price) : "—"}

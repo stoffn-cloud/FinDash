@@ -11,12 +11,28 @@ import { Badge } from "@/components/ui/badge";
 import { ChevronRight, TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/**
- * Dit component is nu volledig onafhankelijk van Base44.
- * Het verwacht een array 'assetClasses' met standaard eigenschappen.
- */
-export default function AssetAllocationTable({ assetClasses = [], onSelectAsset }) {
-  // 1. Veiligheidscheck: als er geen data is, toon een nette lege staat
+// 1. Definieer het type voor een enkele Asset Class
+export interface AssetClass {
+  name: string;
+  allocation_percent: number;
+  current_value: number;
+  expected_return: number;
+  ytd_return: number;
+  color: string;
+}
+
+// 2. Definieer de Props voor het component
+interface AssetAllocationTableProps {
+  assetClasses?: AssetClass[];
+  onSelectAsset?: (asset: AssetClass) => void;
+}
+
+export default function AssetAllocationTable({ 
+  assetClasses = [], 
+  onSelectAsset 
+}: AssetAllocationTableProps) {
+  
+  // Veiligheidscheck
   if (!assetClasses || assetClasses.length === 0) {
     return (
       <div className="rounded-2xl bg-slate-900/80 border border-slate-700/50 p-6 text-center">
@@ -26,10 +42,9 @@ export default function AssetAllocationTable({ assetClasses = [], onSelectAsset 
     );
   }
 
-  // 2. Berekeningen op basis van de meegegeven props
   const totalValue = assetClasses.reduce((sum, ac) => sum + (ac.current_value || 0), 0);
 
-  const formatCurrency = (value) => {
+  const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
@@ -50,7 +65,6 @@ export default function AssetAllocationTable({ assetClasses = [], onSelectAsset 
         </Badge>
       </div>
 
-      {/* Visuele Allocatie Balk */}
       <div className="px-6 py-4 border-b border-slate-700/50 bg-slate-900/20">
         <div className="h-3 rounded-full overflow-hidden flex bg-slate-800">
           {assetClasses.map((ac, index) => (
@@ -121,7 +135,6 @@ export default function AssetAllocationTable({ assetClasses = [], onSelectAsset 
         </TableBody>
       </Table>
 
-      {/* Statistieken onderaan */}
       <div className="p-4 border-t border-slate-700/50 bg-slate-800/30 flex justify-between text-xs sm:text-sm">
         <span className="text-slate-400">Totaal Portfolio</span>
         <div className="flex gap-6">

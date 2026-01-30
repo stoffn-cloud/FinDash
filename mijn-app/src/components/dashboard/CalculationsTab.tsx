@@ -4,31 +4,67 @@ import { Calculator, TrendingUp, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 
+// Eventuele helper functie voor className combinaties
+const cn = (...classes: (string | false | null | undefined)[]) =>
+  classes.filter(Boolean).join(" ");
+
+type BondInputs = {
+  faceValue: number;
+  currentPrice: number;
+  couponRate: number;
+  yearsToMaturity: number;
+  paymentFrequency: number;
+};
+
+type YTMResult = {
+  ytm: number;
+  totalCoupons: number;
+  capitalGainLoss: number;
+  totalReturn: number;
+  currentYield: number;
+};
+
 export default function CalculationsTab() {
-  const [bondInputs, setBondInputs] = useState({
+  const [bondInputs, setBondInputs] = useState<BondInputs>({
     faceValue: 1000,
     currentPrice: 950,
     couponRate: 5,
     yearsToMaturity: 10,
     paymentFrequency: 2,
   });
-  const [ytmResult, setYtmResult] = useState(null);
+
+  const [ytmResult, setYtmResult] = useState<YTMResult | null>(null);
+
+  const updateInput = (field: keyof BondInputs, value: string | number) => {
+    setBondInputs((prev) => ({
+      ...prev,
+      [field]:
+        typeof prev[field] === "number" ? Number(value) : value,
+    }));
+    setYtmResult(null); // Reset resultaat bij nieuwe invoer
+  };
 
   const calculateYTM = () => {
     const { faceValue, currentPrice, couponRate, yearsToMaturity, paymentFrequency } = bondInputs;
-    const F = parseFloat(faceValue);
-    const P = parseFloat(currentPrice);
-    const C = (parseFloat(couponRate) / 100) * F / paymentFrequency;
-    const n = parseFloat(yearsToMaturity) * paymentFrequency;
+    const F = Number(faceValue);
+    const P = Number(currentPrice);
+    const C = (Number(couponRate) / 100) * F / paymentFrequency;
+    const n = Number(yearsToMaturity) * paymentFrequency;
 
-    if (P <= 0 || n <= 0) return; // Voorkom berekeningen met ongeldige invoer
+    if (P <= 0 || n <= 0) return; // Voorkom ongeldige invoer
 
     // Newton-Raphson methode om YTM te benaderen
-    let ytm = couponRate / 100; 
-    const tolerance = 0.0000001;
+    let ytm = couponRate / 100;
+    const tolerance = 1e-7;
     const maxIterations = 100;
 
     for (let i = 0; i < maxIterations; i++) {
@@ -50,7 +86,7 @@ export default function CalculationsTab() {
 
       const diff = priceCalc - P;
       if (Math.abs(diff) < tolerance) break;
-      if (derivative === 0) break; // Voorkom division by zero
+      if (derivative === 0) break;
 
       ytm = ytm - diff / derivative;
     }
@@ -59,22 +95,13 @@ export default function CalculationsTab() {
       ytm: ytm * 100,
       totalCoupons: C * n,
       capitalGainLoss: F - P,
-      totalReturn: (C * n) + (F - P),
+      totalReturn: C * n + (F - P),
       currentYield: ((couponRate / 100) * F / P) * 100,
     });
   };
 
-  const updateInput = (field, value) => {
-    setBondInputs(prev => ({ ...prev, [field]: value }));
-    setYtmResult(null); // Reset resultaat bij nieuwe invoer
-  };
-
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="space-y-6"
-    >
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       <div className="flex items-center gap-3 mb-2">
         <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
           <Calculator className="w-5 h-5 text-amber-500" />
@@ -139,9 +166,9 @@ export default function CalculationsTab() {
 
             <div className="space-y-2">
               <Label className="text-slate-300 text-xs uppercase tracking-wider">Betaalfrequentie</Label>
-              <Select 
-                value={bondInputs.paymentFrequency.toString()} 
-                onValueChange={(v) => updateInput("paymentFrequency", parseInt(v))}
+              <Select
+                value={bondInputs.paymentFrequency.toString()}
+                onValueChange={(v) => updateInput("paymentFrequency", Number(v))}
               >
                 <SelectTrigger className="bg-slate-800/50 border-slate-700 text-white">
                   <SelectValue />
@@ -155,7 +182,7 @@ export default function CalculationsTab() {
               </Select>
             </div>
 
-            <Button 
+            <Button
               onClick={calculateYTM}
               className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold transition-all"
             >
@@ -185,7 +212,7 @@ export default function CalculationsTab() {
                 </div>
                 <div className="bg-slate-800/40 p-4 rounded-xl border border-slate-700/50">
                   <p className="text-slate-400 text-xs mb-1">Koerswinst/Verlies</p>
-                  <p className={`text-xl font-bold ${ytmResult.capitalGainLoss >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  <p className={`text-xl font-bold ${ytmResult.capitalGainLoss >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                     ${ytmResult.capitalGainLoss.toFixed(2)}
                   </p>
                 </div>
@@ -193,13 +220,21 @@ export default function CalculationsTab() {
 
               <div className="pt-4 flex justify-between items-center border-t border-slate-700/50">
                 <span className="text-slate-400 text-sm">Status:</span>
-                <Badge className={cn(
-                  "px-3 py-1",
-                  bondInputs.currentPrice < bondInputs.faceValue ? "bg-emerald-500/20 text-emerald-400" : 
-                  bondInputs.currentPrice > bondInputs.faceValue ? "bg-amber-500/20 text-amber-400" : "bg-slate-700 text-slate-300"
-                )}>
-                  {bondInputs.currentPrice < bondInputs.faceValue ? "Onder Nominale Waarde (Discount)" : 
-                   bondInputs.currentPrice > bondInputs.faceValue ? "Boven Nominale Waarde (Premium)" : "A pari"}
+                <Badge
+                  className={cn(
+                    "px-3 py-1",
+                    bondInputs.currentPrice < bondInputs.faceValue
+                      ? "bg-emerald-500/20 text-emerald-400"
+                      : bondInputs.currentPrice > bondInputs.faceValue
+                      ? "bg-amber-500/20 text-amber-400"
+                      : "bg-slate-700 text-slate-300"
+                  )}
+                >
+                  {bondInputs.currentPrice < bondInputs.faceValue
+                    ? "Onder Nominale Waarde (Discount)"
+                    : bondInputs.currentPrice > bondInputs.faceValue
+                    ? "Boven Nominale Waarde (Premium)"
+                    : "A pari"}
                 </Badge>
               </div>
             </div>

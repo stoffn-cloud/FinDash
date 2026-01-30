@@ -2,28 +2,41 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Info } from "lucide-react";
 
-export default function CorrelationMatrix({ title, subtitle, items = [], correlations = {} }) {
+// ----- Types -----
+interface CorrelationMatrixProps {
+  title: string;
+  subtitle?: string;
+  items?: string[]; // lijst van activa
+  correlations?: Record<string, number>; // bijv. { "AAPL-MSFT": 0.85 }
+}
+
+export default function CorrelationMatrix({
+  title,
+  subtitle,
+  items = [],
+  correlations = {},
+}: CorrelationMatrixProps) {
   // Fallback voor als er geen data is
   if (!items || items.length === 0) {
     return (
       <div className="rounded-2xl bg-slate-900/50 border border-slate-700/50 p-8 text-center">
-        <p className="text-slate-500 italic">Selecteer activa om correlaties te vergelijken</p>
+        <p className="text-slate-500 italic">
+          Selecteer activa om correlaties te vergelijken
+        </p>
       </div>
     );
   }
 
-  // Verbeterde helper om correlatie op te halen (handelt A-B en B-A matches af)
-  const getCorrelation = (item1, item2) => {
+  // Helper om correlatie op te halen (handelt A-B en B-A matches af)
+  const getCorrelation = (item1: string, item2: string) => {
     if (item1 === item2) return 1.0;
     const pair1 = `${item1}-${item2}`;
     const pair2 = `${item2}-${item1}`;
-    
-    // Zoek in de correlations prop, anders een veilige 0.0
     return correlations[pair1] ?? correlations[pair2] ?? 0.0;
   };
 
-  // Dynamische kleurstyling op basis van correlatiewaarde
-  const getStyle = (val) => {
+  // Dynamische kleurstyling
+  const getStyle = (val: number) => {
     if (val >= 0.7) return "bg-emerald-500/80 text-white font-bold";
     if (val >= 0.3) return "bg-emerald-500/30 text-emerald-200";
     if (val > -0.3) return "bg-slate-800/50 text-slate-400"; // Neutraal
@@ -68,7 +81,7 @@ export default function CorrelationMatrix({ title, subtitle, items = [], correla
                 {items.map((colItem, colIndex) => {
                   const val = getCorrelation(rowItem, colItem);
                   const isDiagonal = rowIndex === colIndex;
-                  
+
                   return (
                     <td key={colItem} className="p-0.5">
                       <div

@@ -9,50 +9,85 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { XAxis, YAxis, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts";
+import { XAxis, YAxis, Tooltip, ResponsiveContainer, Area, AreaChart, TooltipProps } from "recharts";
 
-// --- DATA SECTIE (Buiten de component voor performance) ---
-const CENTRAL_BANK_RATES = [
+// --- TYPES ---
+interface CentralBankRate {
+  bank: string;
+  country: string;
+  flag: string;
+  rate: number;
+  previousRate: number;
+  lastChange: string;
+  nextDecision: string;
+}
+
+interface FXRate {
+  pair: string;
+  rate: number;
+  change: number;
+  flag: string;
+}
+
+interface PPP {
+  country: string;
+  flag: string;
+  ppp: number;
+  marketRate: number;
+  valuation: number;
+}
+
+interface YieldData {
+  maturity: string;
+  yield: number;
+}
+
+// --- DATA ---
+const CENTRAL_BANK_RATES: CentralBankRate[] = [
   { bank: "Federal Reserve", country: "USA", flag: "🇺🇸", rate: 4.50, previousRate: 4.75, lastChange: "Dec 2025", nextDecision: "Jan 29, 2026" },
   { bank: "European Central Bank", country: "EUR", flag: "🇪🇺", rate: 3.15, previousRate: 3.40, lastChange: "Jan 2026", nextDecision: "Mar 6, 2026" },
   { bank: "Bank of England", country: "UK", flag: "🇬🇧", rate: 4.25, previousRate: 4.50, lastChange: "Nov 2025", nextDecision: "Feb 6, 2026" },
   { bank: "Bank of Japan", country: "Japan", flag: "🇯🇵", rate: 0.50, previousRate: 0.25, lastChange: "Dec 2025", nextDecision: "Mar 14, 2026" },
 ];
 
-const EXCHANGE_RATES = [
+const EXCHANGE_RATES: FXRate[] = [
   { pair: "EUR/USD", rate: 1.0842, change: 0.35, flag: "🇪🇺" },
   { pair: "GBP/USD", rate: 1.2715, change: -0.18, flag: "🇬🇧" },
   { pair: "USD/JPY", rate: 148.52, change: 0.72, flag: "🇯🇵" },
   { pair: "USD/CHF", rate: 0.8825, change: -0.25, flag: "🇨🇭" },
 ];
 
-const PPP_DATA = [
+const PPP_DATA: PPP[] = [
   { country: "Switzerland", flag: "🇨🇭", ppp: 1.21, marketRate: 0.8825, valuation: -27.1 },
   { country: "Eurozone", flag: "🇪🇺", ppp: 0.88, marketRate: 0.92, valuation: 4.5 },
   { country: "Japan", flag: "🇯🇵", ppp: 96.5, marketRate: 148.52, valuation: -35.0 },
   { country: "United Kingdom", flag: "🇬🇧", ppp: 0.71, marketRate: 0.79, valuation: 11.3 },
 ];
 
-const YIELD_CURVE = [
-  { maturity: "1M", yield: 4.35 }, { maturity: "2Y", yield: 4.12 },
-  { maturity: "10Y", yield: 4.18 }, { maturity: "30Y", yield: 4.38 },
+const YIELD_CURVE: YieldData[] = [
+  { maturity: "1M", yield: 4.35 },
+  { maturity: "2Y", yield: 4.12 },
+  { maturity: "10Y", yield: 4.18 },
+  { maturity: "30Y", yield: 4.38 },
 ];
 
-const CustomTooltip = ({ active, payload, label }) => {
-  if (active && payload && payload.length) {
+// --- CUSTOM TOOLTIP ---
+const CustomTooltip = ({ active, payload }: TooltipProps<YieldData, string>) => {
+  if (active && payload && payload.length > 0) {
+    const data = payload[0].payload as YieldData;
     return (
       <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">
-        <p className="text-white text-xs font-bold">{label}</p>
-        <p className="text-blue-400 text-sm font-mono">{payload[0].value.toFixed(2)}%</p>
+        <p className="text-white text-xs font-bold">{data.maturity}</p>
+        <p className="text-blue-400 text-sm font-mono">{data.yield.toFixed(2)}%</p>
       </div>
     );
   }
   return null;
 };
 
+// --- COMPONENT ---
 export default function MarketsTab() {
-  // We simuleren dat het vandaag 29 jan 2026 is
-  const today = new Date("2026-01-29"); 
+  const today = new Date("2026-01-29");
 
   return (
     <div className="space-y-8 pb-10">
@@ -76,7 +111,7 @@ export default function MarketsTab() {
         </Badge>
       </motion.div>
 
-      {/* 1. Central Bank Policy Rates */}
+      {/* 1. Central Bank Rates */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {CENTRAL_BANK_RATES.map((item) => {
           const change = item.rate - item.previousRate;
@@ -84,9 +119,7 @@ export default function MarketsTab() {
           const isToday = decisionDate.toDateString() === today.toDateString();
 
           return (
-            <motion.div 
-              key={item.bank} 
-              whileHover={{ y: -2 }}
+            <motion.div key={item.bank} whileHover={{ y: -2 }}
               className="bg-slate-900/50 border border-slate-700/50 rounded-2xl p-5 backdrop-blur-sm"
             >
               <div className="flex justify-between items-start mb-4">
@@ -100,7 +133,7 @@ export default function MarketsTab() {
               </div>
               <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">{item.bank}</p>
               <p className="text-2xl font-mono font-bold text-white mt-1">{item.rate.toFixed(2)}%</p>
-              
+
               <div className={cn(
                 "mt-4 text-[10px] py-1 px-2 rounded-md font-bold text-center",
                 isToday ? "bg-rose-500 text-white animate-pulse" : "bg-slate-800 text-slate-400"
@@ -112,8 +145,8 @@ export default function MarketsTab() {
         })}
       </div>
 
+      {/* 2. PPP */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* 2. PPP Analysis */}
         <div className="lg:col-span-2 bg-slate-900/50 border border-slate-700/50 rounded-2xl p-6">
           <div className="flex items-center gap-3 mb-6">
             <Scale className="w-5 h-4 text-violet-400" />
@@ -137,7 +170,7 @@ export default function MarketsTab() {
           </div>
         </div>
 
-        {/* 3. Exchange Rates */}
+        {/* 3. FX Rates */}
         <div className="bg-slate-900/50 border border-slate-700/50 rounded-2xl p-6">
           <div className="flex items-center gap-3 mb-6">
             <ArrowRightLeft className="w-5 h-4 text-blue-400" />
@@ -159,10 +192,8 @@ export default function MarketsTab() {
         </div>
       </div>
 
-      {/* 4. Yield Curve Graph */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+      {/* 4. Yield Curve */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
         className="bg-slate-900/50 border border-slate-700/50 rounded-2xl p-6"
       >
         <div className="flex items-center justify-between mb-8">

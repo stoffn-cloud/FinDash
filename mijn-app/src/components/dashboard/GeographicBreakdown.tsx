@@ -2,18 +2,30 @@ import { motion } from "framer-motion";
 import { Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const REGION_FLAGS = {
-  "Global": "🌍", "North America": "🌎", "Europe": "🇪🇺",
-  "Asia Pacific": "🌏", "Emerging Markets": "🌐", "Other": "🏳️"
+// Flags voor regio's en landen
+const REGION_FLAGS: Record<string, string> = {
+  "Global": "🌍",
+  "North America": "🌎",
+  "Europe": "🇪🇺",
+  "Asia Pacific": "🌏",
+  "Emerging Markets": "🌐",
+  "Other": "🏳️"
 };
 
-const COUNTRY_FLAGS = {
-  "USA": "🇺🇸", "United States": "🇺🇸", "Germany": "🇩🇪",
-  "UK": "🇬🇧", "France": "🇫🇷", "Japan": "🇯🇵",
-  "Netherlands": "🇳🇱", "Switzerland": "🇨🇭", "China": "🇨🇳"
+const COUNTRY_FLAGS: Record<string, string> = {
+  "USA": "🇺🇸",
+  "United States": "🇺🇸",
+  "Germany": "🇩🇪",
+  "UK": "🇬🇧",
+  "France": "🇫🇷",
+  "Japan": "🇯🇵",
+  "Netherlands": "🇳🇱",
+  "Switzerland": "🇨🇭",
+  "China": "🇨🇳"
 };
 
-const REGION_COLORS = {
+// Kleuren per regio
+const REGION_COLORS: Record<string, string> = {
   "Global": "bg-blue-400",
   "North America": "bg-blue-600",
   "Europe": "bg-emerald-500",
@@ -22,33 +34,45 @@ const REGION_COLORS = {
   "Other": "bg-slate-500"
 };
 
-export default function GeographicBreakdown({ assetClasses = [] }) {
-  // 1. Data Aggregatie (Bereken regio- en landtotalen)
-  const geoData = {};
+// Typedefs voor props
+interface Holding {
+  region?: string;
+  country?: string;
+  value?: number;
+}
+
+interface AssetClass {
+  name?: string;
+  holdings?: Holding[];
+}
+
+interface GeographicBreakdownProps {
+  assetClasses?: AssetClass[];
+}
+
+export default function GeographicBreakdown({ assetClasses = [] }: GeographicBreakdownProps) {
+  // 1. Data Aggregatie
+  const geoData: Record<string, { value: number; countries: Record<string, number> }> = {};
   let totalPortfolioValue = 0;
 
   assetClasses.forEach(ac => {
-    const holdings = ac.holdings || [];
+    const holdings = ac.holdings ?? [];
     holdings.forEach(holding => {
-      const region = holding.region || "Other";
-      const country = holding.country || "Unknown";
-      const val = holding.value || 0;
-      
+      const region = holding.region ?? "Other";
+      const country = holding.country ?? "Unknown";
+      const val = holding.value ?? 0;
+
       totalPortfolioValue += val;
 
-      if (!geoData[region]) {
-        geoData[region] = { value: 0, countries: {} };
-      }
+      if (!geoData[region]) geoData[region] = { value: 0, countries: {} };
       geoData[region].value += val;
 
-      if (!geoData[region].countries[country]) {
-        geoData[region].countries[country] = 0;
-      }
+      if (!geoData[region].countries[country]) geoData[region].countries[country] = 0;
       geoData[region].countries[country] += val;
     });
   });
 
-  // 2. Sorteren en Formatteren
+  // 2. Sorteren en formatteren
   const sortedRegions = Object.entries(geoData)
     .map(([region, data]) => ({
       region,
@@ -82,16 +106,16 @@ export default function GeographicBreakdown({ assetClasses = [] }) {
         </div>
       </div>
 
-      {/* Region Bar (Visuele verhouding) */}
+      {/* Region Bar */}
       <div className="px-6 py-4 bg-slate-800/20 border-b border-slate-700/30">
         <div className="h-2.5 rounded-full overflow-hidden flex bg-slate-800">
-          {sortedRegions.map((item, idx) => (
+          {sortedRegions.map((item) => (
             <div
               key={item.region}
               style={{ width: `${item.percentage}%` }}
               className={cn(
                 "h-full border-r border-slate-950/20 last:border-0",
-                REGION_COLORS[item.region] || REGION_COLORS.Other
+                REGION_COLORS[item.region as keyof typeof REGION_COLORS] ?? REGION_COLORS.Other
               )}
             />
           ))}
@@ -105,7 +129,7 @@ export default function GeographicBreakdown({ assetClasses = [] }) {
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
                 <span className="text-xl filter grayscale group-hover:grayscale-0 transition-all">
-                  {REGION_FLAGS[item.region] || "🌐"}
+                  {REGION_FLAGS[item.region as keyof typeof REGION_FLAGS] ?? "🌐"}
                 </span>
                 <span className="font-bold text-slate-200">{item.region}</span>
               </div>
@@ -114,12 +138,12 @@ export default function GeographicBreakdown({ assetClasses = [] }) {
               </span>
             </div>
 
-            {/* Deel-landen (sub-lijst) */}
+            {/* Deel-landen */}
             <div className="ml-9 pl-4 border-l-2 border-slate-800 space-y-2">
               {item.countries.slice(0, 3).map((country) => (
                 <div key={country.name} className="flex justify-between items-center text-xs">
                   <div className="flex items-center gap-2 text-slate-400">
-                    <span>{COUNTRY_FLAGS[country.name] || "🏳️"}</span>
+                    <span>{COUNTRY_FLAGS[country.name] ?? "🏳️"}</span>
                     <span>{country.name}</span>
                   </div>
                   <span className="text-slate-500 font-medium">{country.percentage.toFixed(1)}%</span>

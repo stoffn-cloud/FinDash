@@ -2,25 +2,36 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Globe } from "lucide-react";
 
-const CURRENCY_FLAGS = {
+// Flags en kleuren
+const CURRENCY_FLAGS: Record<string, string> = {
   USD: "🇺🇸", EUR: "🇪🇺", GBP: "🇬🇧", JPY: "🇯🇵",
   CHF: "🇨🇭", CAD: "🇨🇦", AUD: "🇦🇺", CNY: "🇨🇳",
   HKD: "🇭🇰", SGD: "🇸🇬",
 };
 
-const CURRENCY_COLORS = {
+const CURRENCY_COLORS: Record<string, string> = {
   USD: "bg-blue-500",
   EUR: "bg-emerald-500",
   GBP: "bg-violet-500",
   JPY: "bg-rose-500",
   CHF: "bg-amber-500",
   CAD: "bg-cyan-500",
-  // Fallback kleur
   DEFAULT: "bg-slate-500"
 };
 
-export default function CurrencyBreakdown({ currencies = [] }) {
-  // Controleer of er data is, anders tonen we een lege state
+// TypeScript types
+interface Currency {
+  code: string;        // USD, EUR, etc.
+  percentage: number;  // percentage van portfolio
+  value: number;       // absolute waarde in portfolio
+}
+
+interface CurrencyBreakdownProps {
+  currencies?: Currency[];
+}
+
+export default function CurrencyBreakdown({ currencies = [] }: CurrencyBreakdownProps) {
+  // Lege state fallback
   if (!currencies || currencies.length === 0) {
     return (
       <div className="rounded-2xl bg-slate-900/50 border border-slate-700/50 p-6">
@@ -43,8 +54,8 @@ export default function CurrencyBreakdown({ currencies = [] }) {
         <h3 className="text-lg font-semibold text-white">Valuta Blootstelling</h3>
         <span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">FX Exposure</span>
       </div>
-      
-      {/* 1. De Stacked Bar (Visueel overzicht) */}
+
+      {/* Stacked Bar */}
       <div className="h-3 rounded-full overflow-hidden flex mb-8 bg-slate-800">
         {currencies.map((currency, index) => (
           <motion.div
@@ -60,8 +71,8 @@ export default function CurrencyBreakdown({ currencies = [] }) {
           />
         ))}
       </div>
-      
-      {/* 2. Gedetailleerde Lijst */}
+
+      {/* Gedetailleerde lijst */}
       <div className="space-y-4">
         {currencies.map((currency) => (
           <div key={currency.code} className="flex items-center justify-between group">
