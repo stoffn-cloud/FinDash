@@ -96,14 +96,14 @@ export default function Dashboard() {
       {/* Background Glows */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <motion.div 
-          animate={{ scale: [1, 1.1, 1], opacity: [0.05, 0.08, 0.05] }}
+          animate={{ scale: [1, 1.1, 1], opacity: [0.1, 0.2, 0.1] }}
           transition={{ duration: 10, repeat: Infinity }}
-          className="absolute -top-24 -left-24 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px]" 
+          className="absolute -top-24 -left-24 w-[500px] h-[500px] bg-blue-600/15 rounded-full blur-[120px]"
         />
         <motion.div 
-          animate={{ scale: [1, 1.2, 1], opacity: [0.05, 0.1, 0.05] }}
+          animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.2, 0.1] }}
           transition={{ duration: 15, repeat: Infinity, delay: 2 }}
-          className="absolute top-1/2 -right-24 w-[400px] h-[400px] bg-violet-600/10 rounded-full blur-[120px]" 
+          className="absolute top-1/2 -right-24 w-[400px] h-[400px] bg-violet-600/15 rounded-full blur-[120px]"
         />
       </div>
 

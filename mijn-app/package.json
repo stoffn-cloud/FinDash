@@ -58,6 +58,7 @@
   },
   "devDependencies": {
     "@eslint/js": "latest",
+    "@tailwindcss/vite": "^4.1.18",
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "@vitejs/plugin-react": "latest",
