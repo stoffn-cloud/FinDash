@@ -34,29 +34,31 @@ interface CustomTooltipPayload {
 }
 
 // ---------------------- CUSTOM TOOLTIP ----------------------
-const CustomTooltip = ({
-  active,
-  payload,
-  label
-}: TooltipProps<number, string>) => {
+// We gebruiken : any om de Recharts 'payload' error te omzeilen
+const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
-    const data = payload as CustomTooltipPayload[];
     return (
-      <div className="bg-slate-900/95 border border-slate-700 backdrop-blur-md rounded-xl px-4 py-3 shadow-2xl">
-        <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-2">
-          {format(parseISO(label), "dd MMM yyyy")}
+      <div className="bg-slate-900/90 border border-slate-700 p-4 rounded-xl shadow-2xl backdrop-blur-md border-l-4 border-l-blue-500">
+        <p className="text-slate-500 text-[10px] uppercase font-bold tracking-widest mb-2">
+          {label}
         </p>
-        {data.map((entry, index) => (
-          <div key={index} className="flex items-center justify-between gap-8 mb-1 last:mb-0">
-            <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: entry.color }} />
-              <span className="text-xs text-slate-300">{entry.name}</span>
-            </div>
-            <span className="text-xs font-mono font-bold text-white">
-              {entry.value >= 0 ? '+' : ''}{entry.value.toFixed(2)}%
+        <div className="space-y-1">
+          <div className="flex items-center justify-between gap-8">
+            <span className="text-sm text-slate-300">Portfolio Waarde:</span>
+            <span className="text-sm font-mono font-bold text-white">
+              ${payload[0].value.toLocaleString()}
             </span>
           </div>
-        ))}
+          {/* Optioneel: als je een tweede lijn hebt (bijv. benchmark) */}
+          {payload[1] && (
+            <div className="flex items-center justify-between gap-8">
+              <span className="text-sm text-slate-500 italic">Benchmark:</span>
+              <span className="text-sm font-mono font-bold text-slate-400">
+                ${payload[1].value.toLocaleString()}
+              </span>
+            </div>
+          )}
+        </div>
       </div>
     );
   }

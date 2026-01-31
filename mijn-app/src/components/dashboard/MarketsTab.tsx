@@ -71,14 +71,28 @@ const YIELD_CURVE: YieldData[] = [
   { maturity: "30Y", yield: 4.38 },
 ];
 
-// --- CUSTOM TOOLTIP ---
-const CustomTooltip = ({ active, payload }: TooltipProps<YieldData, string>) => {
-  if (active && payload && payload.length > 0) {
-    const data = payload[0].payload as YieldData;
+// ---------------------- CUSTOM TOOLTIP FIX ----------------------
+// We gebruiken : any om de strikte Recharts TooltipProps te omzeilen
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
     return (
-      <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">
-        <p className="text-white text-xs font-bold">{data.maturity}</p>
-        <p className="text-blue-400 text-sm font-mono">{data.yield.toFixed(2)}%</p>
+      <div className="bg-slate-900/95 border border-slate-700 p-3 rounded-xl shadow-2xl backdrop-blur-md">
+        <p className="text-slate-400 text-[10px] uppercase font-bold tracking-wider mb-2">
+          {label}
+        </p>
+        <div className="space-y-1">
+          {payload.map((entry: any, index: number) => (
+            <div key={index} className="flex items-center justify-between gap-4">
+              <span className="text-xs text-slate-300">{entry.name}:</span>
+              <span 
+                className="text-xs font-mono font-bold" 
+                style={{ color: entry.color || entry.fill }}
+              >
+                {entry.value.toFixed(2)}%
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

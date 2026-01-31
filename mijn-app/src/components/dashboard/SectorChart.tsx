@@ -27,19 +27,18 @@ const COLORS = [
 ];
 
 // ---------------------- CUSTOM TOOLTIP ----------------------
-const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
-  if (active && payload && payload.length > 0) {
-    const data = payload[0].payload as Sector; // type assertion
+// We gebruiken : any om de strikte (en vaak incomplete) Recharts types te omzeilen
+const CustomTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
     return (
-      <div className="bg-slate-900/90 border border-slate-700 backdrop-blur-md rounded-xl px-4 py-3 shadow-2xl">
-        <p className="text-white font-bold text-xs uppercase tracking-widest mb-1">
-          {data.name}
-        </p>
-        <div className="flex items-center gap-2">
-          <span className="text-emerald-400 font-mono font-bold">
-            {data.percentage.toFixed(1)}%
+      <div className="bg-slate-900/90 border border-slate-700 p-3 rounded-lg shadow-xl backdrop-blur-md">
+        <p className="text-white font-medium mb-1">{data.name}</p>
+        <div className="flex items-center gap-4 text-sm">
+          <span className="text-slate-400">Waarde:</span>
+          <span className="text-blue-400 font-mono">
+            €{data.value.toLocaleString("nl-NL")}
           </span>
-          <span className="text-slate-500 text-[10px]">van totaal</span>
         </div>
       </div>
     );
@@ -124,7 +123,7 @@ export default function SectorChart({ sectors }: SectorChartProps) {
         </div>
       </div>
 
-      <style jsx>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         .custom-scrollbar::-webkit-scrollbar {
           width: 4px;
         }
@@ -138,7 +137,7 @@ export default function SectorChart({ sectors }: SectorChartProps) {
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
           background: #334155;
         }
-      `}</style>
+      `}} />
     </motion.div>
   );
 }

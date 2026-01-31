@@ -12,8 +12,7 @@ import {
   Globe,
   Calendar as CalendarIcon,
   Calculator,
-  Search,
-  Settings
+  Search
 } from "lucide-react";
 
 // Utilities
@@ -29,11 +28,10 @@ import {
   CommandList,
   CommandEmpty,
   CommandGroup,
-  CommandItem,
-  CommandShortcut
+  CommandItem
 } from "@/components/ui/command";
 
-// Dashboard Secties
+// Dashboard Sections
 import DashboardContent from "@/components/dashboard/DashboardContent";
 import TransactionHistory from "@/components/dashboard/TransactionHistory";
 import CorrelationsTab from "@/components/dashboard/CorrelationsTab";
@@ -46,13 +44,41 @@ import AssetClassDetail from "@/components/dashboard/AssetClassDetail";
 // Data Import
 import { mockPortfolio } from "@/api/mockData";
 
+// ------------------- TYPES (EENDUIDIG) -------------------
+interface AssetClass {
+  id: string;
+  name: string;
+  value: number;         // Matcht met nieuwe mockData
+  percentage: number;    // Matcht met nieuwe mockData
+  expected_return: number;
+  ytd_return: number;
+  color: string;
+  holdings?: any[];
+}
+
+interface Portfolio {
+  name: string;
+  totalValue: number;
+  dailyChangePercent: number;
+  ytdReturn: number;
+  riskMetrics: {
+    beta: number;
+    maxDrawdown: number;
+    volatility: number;
+  };
+  assetClasses: AssetClass[];
+  sectorAllocation: any[];
+  currencyAllocation: any[];
+  performanceHistory: any[];
+}
+
+// ------------------- COMPONENT -------------------
 export default function Dashboard() {
-  const [selectedAssetClass, setSelectedAssetClass] = useState(null);
+  const [selectedAssetClass, setSelectedAssetClass] = useState<AssetClass | null>(null);
   const [isCommandOpen, setIsCommandOpen] = useState(false);
 
-  // Keyboard shortcut voor de Search (Cmd+K)
   useEffect(() => {
-    const down = (e) => {
+    const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         setIsCommandOpen((open) => !open);
@@ -62,17 +88,16 @@ export default function Dashboard() {
     return () => document.removeEventListener("keydown", down);
   }, []);
 
-  const { data: portfolio, isLoading, refetch, isFetching } = useQuery({
+  const { data: portfolio, isLoading, refetch, isFetching } = useQuery<Portfolio>({
     queryKey: ["portfolio"],
     queryFn: async () => {
       await new Promise(resolve => setTimeout(resolve, 800));
-      return mockPortfolio;
+      return mockPortfolio as unknown as Portfolio;
     },
   });
 
-  const assetClasses = portfolio?.assetClasses || [];
-
-  if (isLoading) {
+  // ------------------- LOADING & ERROR STATE -------------------
+  if (isLoading || !portfolio) {
     return (
       <div className="min-h-screen bg-[#020617] p-6 md:p-10">
         <div className="max-w-7xl mx-auto space-y-8">
@@ -91,20 +116,13 @@ export default function Dashboard() {
     );
   }
 
+  // ------------------- MAIN RENDER -------------------
   return (
     <div className="min-h-screen bg-[#020617] text-slate-200 selection:bg-blue-500/30">
       {/* Background Glows */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <motion.div 
-          animate={{ scale: [1, 1.1, 1], opacity: [0.05, 0.08, 0.05] }}
-          transition={{ duration: 10, repeat: Infinity }}
-          className="absolute -top-24 -left-24 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px]" 
-        />
-        <motion.div 
-          animate={{ scale: [1, 1.2, 1], opacity: [0.05, 0.1, 0.05] }}
-          transition={{ duration: 15, repeat: Infinity, delay: 2 }}
-          className="absolute top-1/2 -right-24 w-[400px] h-[400px] bg-violet-600/10 rounded-full blur-[120px]" 
-        />
+        <div className="absolute -top-24 -left-24 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px]" />
+        <div className="absolute top-1/2 -right-24 w-[400px] h-[400px] bg-violet-600/10 rounded-full blur-[120px]" />
       </div>
 
       <div className="relative z-10 p-4 md:p-10">
@@ -121,7 +139,7 @@ export default function Dashboard() {
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Terminal v2.0 • Live</span>
               </div>
               <h1 className="text-4xl md:text-5xl font-extrabold text-white tracking-tighter italic">
-                {portfolio?.name}
+                {portfolio.name}
               </h1>
             </motion.div>
             
@@ -154,7 +172,7 @@ export default function Dashboard() {
               <div className="p-1 bg-slate-950/60 backdrop-blur-xl border border-slate-800/50 rounded-2xl shadow-2xl inline-block">
                 <TabsList className="bg-transparent border-none gap-1">
                   <NavTrigger value="dashboard" icon={LayoutDashboard} label="Overview" />
-                  <NavTrigger value="assets" icon={Grid3X3} label="Asset Classes" />
+                  <NavTrigger value="assets" icon={Grid3X3} label="Analysis" />
                   <NavTrigger value="transactions" icon={History} label="History" />
                   <NavTrigger value="markets" icon={Globe} label="Markets" />
                   <NavTrigger value="calendar" icon={CalendarIcon} label="Calendar" />
@@ -165,13 +183,37 @@ export default function Dashboard() {
             </div>
 
             <AnimatePresence mode="wait">
-              <TabsContent value="dashboard"><DashboardContent portfolio={portfolio} assetClasses={assetClasses} onSelectAsset={setSelectedAssetClass} /></TabsContent>
-              <TabsContent value="assets"><CorrelationsTab portfolio={portfolio} /></TabsContent>
-              <TabsContent value="transactions"><TransactionHistory /></TabsContent>
-              <TabsContent value="markets"><MarketsTab /></TabsContent>
-              <TabsContent value="calendar"><CalendarTab /></TabsContent>
-              <TabsContent value="sandbox"><SandboxTab /></TabsContent>
-              <TabsContent value="calculations"><CalculationsTab /></TabsContent>
+              <TabsContent value="dashboard" key="dashboard">
+                <DashboardContent 
+                  portfolio={portfolio} 
+                  assetClasses={portfolio.assetClasses} 
+                  onSelectAsset={setSelectedAssetClass} 
+                />
+              </TabsContent>
+
+              <TabsContent value="assets" key="assets">
+                <CorrelationsTab portfolio={portfolio} />
+              </TabsContent>
+
+              <TabsContent value="transactions" key="transactions">
+                <TransactionHistory />
+              </TabsContent>
+
+              <TabsContent value="markets" key="markets">
+                <MarketsTab />
+              </TabsContent>
+
+              <TabsContent value="calendar" key="calendar">
+                <CalendarTab />
+              </TabsContent>
+
+              <TabsContent value="sandbox" key="sandbox">
+                <SandboxTab />
+              </TabsContent>
+
+              <TabsContent value="calculations" key="math">
+                <CalculationsTab />
+              </TabsContent>
             </AnimatePresence>
           </Tabs>
         </div>
@@ -186,10 +228,6 @@ export default function Dashboard() {
             <CommandItem onSelect={() => setIsCommandOpen(false)}>Overview</CommandItem>
             <CommandItem onSelect={() => setIsCommandOpen(false)}>Portfolio Analysis</CommandItem>
           </CommandGroup>
-          <CommandGroup heading="Quick Actions">
-            <CommandItem onSelect={() => refetch()}>Refresh Data</CommandItem>
-            <CommandItem>Export CSV</CommandItem>
-          </CommandGroup>
         </CommandList>
       </CommandDialog>
 
@@ -203,8 +241,14 @@ export default function Dashboard() {
   );
 }
 
-// Helper component for cleaner TabsList
-function NavTrigger({ value, icon: Icon, label }) {
+// ------------------- NavTrigger -------------------
+interface NavTriggerProps {
+  value: string;
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+}
+
+function NavTrigger({ value, icon: Icon, label }: NavTriggerProps) {
   return (
     <TabsTrigger 
       value={value} 
