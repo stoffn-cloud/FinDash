@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { XAxis, YAxis, Tooltip, ResponsiveContainer, Area, AreaChart, TooltipProps } from "recharts";
+import { XAxis, YAxis, Tooltip, ResponsiveContainer, Area, AreaChart, TooltipContentProps } from "recharts";
 
 // --- TYPES ---
 interface CentralBankRate {
@@ -72,7 +72,7 @@ const YIELD_CURVE: YieldData[] = [
 ];
 
 // --- CUSTOM TOOLTIP ---
-const CustomTooltip = ({ active, payload }: TooltipProps<YieldData, string>) => {
+const CustomTooltip = ({ active, payload }: TooltipContentProps<number, string>) => {
   if (active && payload && payload.length > 0) {
     const data = payload[0].payload as YieldData;
     return (
@@ -213,7 +213,7 @@ export default function MarketsTab() {
               </defs>
               <XAxis dataKey="maturity" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} />
               <YAxis domain={[3.5, 5]} hide />
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={CustomTooltip} />
               <Area type="monotone" dataKey="yield" stroke="#3B82F6" strokeWidth={3} fill="url(#yieldColor)" />
             </AreaChart>
           </ResponsiveContainer>

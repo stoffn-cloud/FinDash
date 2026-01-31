@@ -9,8 +9,8 @@ import { cn } from "../../lib/utils"
 const ResizablePanelGroup = ({
   className,
   ...props
-}: React.ComponentProps<typeof ResizablePrimitive.PanelGroup>) => (
-  <ResizablePrimitive.PanelGroup
+}: any) => (
+  <ResizablePrimitive.Group
     className={cn(
       "flex h-full w-full data-[panel-group-direction=vertical]:flex-col",
       className
@@ -21,13 +21,12 @@ const ResizablePanelGroup = ({
 
 const ResizablePanel = ResizablePrimitive.Panel
 
-// We casten hier naar 'any' als noodgreep voor de missende export in de types
 const ResizableHandle = ({
   withHandle,
   className,
   ...props
 }: any) => (
-  <ResizablePrimitive.PanelResizeHandle
+  <ResizablePrimitive.Separator
     className={cn(
       "relative flex w-px items-center justify-center bg-slate-200 transition-all after:absolute after:inset-y-0 after:left-1/2 after:w-1 after:-translate-x-1/2 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-950 focus-visible:ring-offset-1 data-[transitioning]:transition-none dark:bg-slate-800 dark:focus-visible:ring-slate-300",
       "data-[panel-group-direction=vertical]:h-px data-[panel-group-direction=vertical]:w-full data-[panel-group-direction=vertical]:after:inset-x-0 data-[panel-group-direction=vertical]:after:h-1 data-[panel-group-direction=vertical]:after:left-0 data-[panel-group-direction=vertical]:after:top-1/2 data-[panel-group-direction=vertical]:after:-translate-y-1/2",
@@ -40,7 +39,7 @@ const ResizableHandle = ({
         <GripVertical className="h-2.5 w-2.5" />
       </div>
     )}
-  </ResizablePrimitive.PanelResizeHandle>
+  </ResizablePrimitive.Separator>
 )
 
 export { ResizablePanelGroup, ResizablePanel, ResizableHandle }

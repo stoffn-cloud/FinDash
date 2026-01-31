@@ -11,46 +11,12 @@ import RiskGauge from "@/components/dashboard/RiskGauge";
 import AssetAllocationTable from "@/components/dashboard/AssetAllocationTable";
 import GeographicBreakdown from "@/components/dashboard/GeographicBreakdown";
 
-// ------------------------
-// TypeScript interfaces
-// ------------------------
-interface RiskMetrics {
-  beta?: number;
-  maxDrawdown?: number;
-  volatility?: number;
-  [key: string]: any;
-}
-
-interface Sector {
-  name: string;
-  value: number;
-}
-
-interface Currency {
-  code: string;
-  percentage: number;
-  value: number;
-}
-
-interface AssetClass {
-  name: string;
-  holdings?: any[];
-}
-
-interface Portfolio {
-  totalValue?: number;
-  dailyChangePercent?: number;
-  ytdReturn?: number;
-  riskMetrics?: RiskMetrics;
-  performanceHistory?: any[];
-  sectorAllocation?: Sector[];
-  currencyAllocation?: Currency[];
-}
+import { Portfolio, AssetClass } from "@/types/dashboard";
 
 interface DashboardContentProps {
   portfolio?: Portfolio;
   assetClasses?: AssetClass[];
-  setSelectedAssetClass?: (assetClass: AssetClass) => void;
+  onSelectAsset?: (assetClass: AssetClass) => void;
 }
 
 // ------------------------
@@ -59,7 +25,7 @@ interface DashboardContentProps {
 export default function DashboardContent({
   portfolio,
   assetClasses = [],
-  setSelectedAssetClass,
+  onSelectAsset,
 }: DashboardContentProps) {
   if (!portfolio) return null;
 
@@ -131,7 +97,7 @@ export default function DashboardContent({
           {/* FIX: fallback naar lege array voorkomt never[] error */}
           <AssetAllocationTable
             assetClasses={assetClasses || []}
-            onSelectAsset={setSelectedAssetClass}
+            onSelectAsset={onSelectAsset}
           />
         </div>
         <div className="space-y-6">

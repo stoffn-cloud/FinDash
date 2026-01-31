@@ -1,18 +1,12 @@
 import { motion } from "framer-motion";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, TooltipProps } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, TooltipContentProps } from "recharts";
 import { cn } from "@/lib/utils";
+import { Sector } from "@/types/dashboard";
 
 // ---------------------- TYPES ----------------------
-interface Sector {
-  name: string;
-  percentage: number;
-}
-
 interface SectorChartProps {
   sectors: Sector[];
 }
-
-interface CustomTooltipProps extends TooltipProps<number, string> {}
 
 // ---------------------- COLORS ----------------------
 const COLORS = [
@@ -27,7 +21,7 @@ const COLORS = [
 ];
 
 // ---------------------- CUSTOM TOOLTIP ----------------------
-const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
+const CustomTooltip = ({ active, payload }: TooltipContentProps<number, string>) => {
   if (active && payload && payload.length > 0) {
     const data = payload[0].payload as Sector; // type assertion
     return (
@@ -96,7 +90,7 @@ export default function SectorChart({ sectors }: SectorChartProps) {
                   />
                 ))}
               </Pie>
-              <Tooltip content={<CustomTooltip />} cursor={false} />
+              <Tooltip content={CustomTooltip} cursor={false} />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -124,7 +118,7 @@ export default function SectorChart({ sectors }: SectorChartProps) {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 4px;
         }

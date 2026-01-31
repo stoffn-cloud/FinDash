@@ -9,7 +9,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
-  TooltipProps
+  TooltipContentProps
 } from "recharts";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -38,13 +38,13 @@ const CustomTooltip = ({
   active,
   payload,
   label
-}: TooltipProps<number, string>) => {
-  if (active && payload && payload.length) {
-    const data = payload as CustomTooltipPayload[];
+}: TooltipContentProps<number, string>) => {
+  if (active && payload && payload.length && label) {
+    const data = payload as unknown as CustomTooltipPayload[];
     return (
       <div className="bg-slate-900/95 border border-slate-700 backdrop-blur-md rounded-xl px-4 py-3 shadow-2xl">
         <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-2">
-          {format(parseISO(label), "dd MMM yyyy")}
+          {format(parseISO(label.toString()), "dd MMM yyyy")}
         </p>
         {data.map((entry, index) => (
           <div key={index} className="flex items-center justify-between gap-8 mb-1 last:mb-0">
@@ -144,7 +144,7 @@ export default function PerformanceChart({
               axisLine={false}
               tickFormatter={(val) => `${val}%`}
             />
-            <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#334155', strokeWidth: 1 }} />
+            <Tooltip content={CustomTooltip} cursor={{ stroke: '#334155', strokeWidth: 1 }} />
             <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ paddingBottom: '20px', fontSize: '12px' }} />
             
             {/* Benchmark lijn */}

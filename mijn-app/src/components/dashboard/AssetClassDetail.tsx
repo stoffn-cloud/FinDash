@@ -17,27 +17,12 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, TooltipProps } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, TooltipContentProps } from "recharts";
 import { cn } from "@/lib/utils";
-import { AssetClass } from "./AssetAllocationTable"; // Importeer de interface die we eerder maakten
-
-// 1. Definieer de interface voor een Holding
-interface Holding {
-  name: string;
-  ticker: string;
-  weight: number;
-  value: number;
-  return_ytd: number;
-}
-
-// 2. Breid de AssetClass uit met holdings (als dat nog niet gebeurd was)
-interface ExtendedAssetClass extends AssetClass {
-  holdings?: Holding[];
-  volatility?: number;
-}
+import { AssetClass, Holding } from "@/types/dashboard";
 
 interface AssetClassDetailProps {
-  assetClass: ExtendedAssetClass | null;
+  assetClass: AssetClass | null;
   onClose: () => void;
 }
 
@@ -46,8 +31,8 @@ const HOLDING_COLORS = [
   "#06B6D4", "#F97316", "#6366F1", "#84CC16", "#14B8A6"
 ];
 
-// 3. Fix de 'any' error door TooltipProps te gebruiken van recharts
-const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
+// 3. Fix de 'any' error door TooltipContentProps te gebruiken van recharts
+const CustomTooltip = ({ active, payload }: TooltipContentProps<number, string>) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload as Holding;
     return (
@@ -159,7 +144,7 @@ export default function AssetClassDetail({ assetClass, onClose }: AssetClassDeta
                             <Cell key={index} fill={HOLDING_COLORS[index % HOLDING_COLORS.length]} />
                           ))}
                         </Pie>
-                        <Tooltip content={<CustomTooltip />} />
+                        <Tooltip content={CustomTooltip} />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
