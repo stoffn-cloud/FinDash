@@ -1,6 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Target, TrendingUp, Wallet, Activity, BarChart3, ShieldAlert } from "lucide-react";
+import { formatCurrency, formatPercentage } from "@/lib/formatters";
 
 // Components
 import PortfolioMetricCard from "@/components/dashboard/PortfolioMetricCard";
@@ -63,13 +64,6 @@ export default function DashboardContent({
 }: DashboardContentProps) {
   if (!portfolio) return null;
 
-  const formatCurrency = (value?: number) => {
-    if (value === undefined || value === null) return "$0";
-    if (value >= 1000000) return `$${(value / 1000000).toFixed(2)}M`;
-    if (value >= 1000) return `$${(value / 1000).toFixed(1)}K`;
-    return `$${value.toFixed(0)}`;
-  };
-
   return (
     <div className="space-y-8 pb-12">
       {/* Top Row Metrics */}
@@ -79,7 +73,7 @@ export default function DashboardContent({
           value={formatCurrency(portfolio.totalValue)}
           icon={Wallet}
           trend={portfolio.dailyChangePercent && portfolio.dailyChangePercent >= 0 ? "up" : "down"}
-          trendValue={`${portfolio.dailyChangePercent?.toFixed(2) || "0"}%`}
+          trendValue={portfolio.dailyChangePercent}
           subtitle="Huidige liquidatiewaarde"
           className=""
           delay={0}
@@ -87,10 +81,10 @@ export default function DashboardContent({
 
         <PortfolioMetricCard
           title="YTD Rendement"
-          value={`${portfolio.ytdReturn && portfolio.ytdReturn >= 0 ? '+' : ''}${portfolio.ytdReturn?.toFixed(2) || "0"}%`}
+          value={formatPercentage(portfolio.ytdReturn, true)}
           icon={TrendingUp}
           trend={portfolio.ytdReturn && portfolio.ytdReturn >= 0 ? "up" : "down"}
-          trendValue={`${portfolio.ytdReturn?.toFixed(2) || "0"}%`}
+          trendValue={portfolio.ytdReturn}
           subtitle="Rendement sinds 1 jan"
           className=""
           delay={0.1}
@@ -101,7 +95,7 @@ export default function DashboardContent({
           value={portfolio.riskMetrics?.beta?.toFixed(2) || "1.00"}
           icon={Activity}
           trend={portfolio.riskMetrics?.beta && portfolio.riskMetrics.beta > 1.2 ? "down" : "up"}
-          trendValue={portfolio.riskMetrics?.beta?.toFixed(2) || "1.00"}
+          trendValue={portfolio.riskMetrics?.beta}
           subtitle="Marktgevoeligheid"
           className=""
           delay={0.2}
@@ -109,10 +103,10 @@ export default function DashboardContent({
 
         <PortfolioMetricCard
           title="Max Drawdown"
-          value={`${portfolio.riskMetrics?.maxDrawdown?.toFixed(1) || "0"}%`}
+          value={formatPercentage(portfolio.riskMetrics?.maxDrawdown, false, 1)}
           icon={ShieldAlert}
           trend="down"
-          trendValue={`${portfolio.riskMetrics?.maxDrawdown?.toFixed(1) || "0"}%`}
+          trendValue={portfolio.riskMetrics?.maxDrawdown}
           subtitle="Grootste daling piek-dal"
           className=""
           delay={0.3}

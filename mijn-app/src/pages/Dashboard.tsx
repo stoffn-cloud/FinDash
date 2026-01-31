@@ -30,8 +30,11 @@ import {
   CommandEmpty,
   CommandGroup,
   CommandItem,
-  CommandShortcut
 } from "@/components/ui/command";
+
+// UI Components - Robustness
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
+import { AlertCircle, RotateCcw } from "lucide-react";
 
 // Dashboard Secties
 import DashboardContent from "@/components/dashboard/DashboardContent";
@@ -43,8 +46,9 @@ import SandboxTab from "@/components/dashboard/SandboxTab";
 import CalculationsTab from "@/components/dashboard/CalculationsTab";
 import AssetClassDetail from "@/components/dashboard/AssetClassDetail";
 
-// Data Import
+// Data Import & Validation
 import { mockPortfolio } from "@/api/mockData";
+import { PortfolioSchema } from "@/api/schemas";
 
 export default function Dashboard() {
   const [selectedAssetClass, setSelectedAssetClass] = useState(null);
@@ -63,15 +67,50 @@ export default function Dashboard() {
     return () => document.removeEventListener("keydown", down);
   }, []);
 
-  const { data: portfolio, isLoading, refetch, isFetching } = useQuery({
+  const { data: portfolio, isLoading, error, refetch, isFetching } = useQuery({
     queryKey: ["portfolio"],
     queryFn: async () => {
+      // Simulate network delay
       await new Promise(resolve => setTimeout(resolve, 800));
-      return mockPortfolio;
+
+      // Robustness: Validate mock data with Zod
+      const result = PortfolioSchema.safeParse(mockPortfolio);
+
+      if (!result.success) {
+        console.error("Data Validation Error:", result.error);
+        throw new Error("Ongeldige portfolio data format.");
+      }
+
+      return result.data;
     },
+    retry: 1,
   });
 
   const assetClasses = portfolio?.assetClasses || [];
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-[#020617] flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center backdrop-blur-xl">
+          <div className="w-16 h-16 bg-rose-500/10 rounded-full flex items-center justify-center mb-6 border border-rose-500/20 mx-auto">
+            <AlertCircle className="w-8 h-8 text-rose-500" />
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-2">Fout bij laden</h2>
+          <p className="text-slate-400 mb-8">
+            Er is een probleem opgetreden bij het ophalen van de portfolio gegevens.
+          </p>
+          <Button
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="bg-blue-600 hover:bg-blue-500 w-full"
+          >
+            <RotateCcw className={cn("w-4 h-4 mr-2", isFetching && "animate-spin")} />
+            Opnieuw Proberen
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -165,23 +204,25 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-              >
-                <TabsContent value="dashboard"><DashboardContent portfolio={portfolio} assetClasses={assetClasses} onSelectAsset={setSelectedAssetClass} /></TabsContent>
-                <TabsContent value="assets"><CorrelationsTab portfolio={portfolio} /></TabsContent>
-                <TabsContent value="transactions"><TransactionHistory /></TabsContent>
-                <TabsContent value="markets"><MarketsTab /></TabsContent>
-                <TabsContent value="calendar"><CalendarTab /></TabsContent>
-                <TabsContent value="sandbox"><SandboxTab /></TabsContent>
-                <TabsContent value="calculations"><CalculationsTab /></TabsContent>
-              </motion.div>
-            </AnimatePresence>
+            <ErrorBoundary>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeTab}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <TabsContent value="dashboard"><DashboardContent portfolio={portfolio} assetClasses={assetClasses} onSelectAsset={setSelectedAssetClass} /></TabsContent>
+                  <TabsContent value="assets"><CorrelationsTab portfolio={portfolio} /></TabsContent>
+                  <TabsContent value="transactions"><TransactionHistory /></TabsContent>
+                  <TabsContent value="markets"><MarketsTab /></TabsContent>
+                  <TabsContent value="calendar"><CalendarTab /></TabsContent>
+                  <TabsContent value="sandbox"><SandboxTab /></TabsContent>
+                  <TabsContent value="calculations"><CalculationsTab /></TabsContent>
+                </motion.div>
+              </AnimatePresence>
+            </ErrorBoundary>
           </Tabs>
         </div>
       </div>

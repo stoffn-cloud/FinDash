@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LucideIcon } from "lucide-react";
+import { formatPercentage } from "@/lib/formatters";
 
 // ---------------------- TYPES ----------------------
 interface PortfolioMetricCardProps {
@@ -74,7 +75,7 @@ export default function PortfolioMetricCard({
                   {isPositive && <TrendingUp className="w-3 h-3" />}
                   {isNegative && <TrendingDown className="w-3 h-3" />}
                   {!isPositive && !isNegative && <Minus className="w-3 h-3" />}
-                  <span>{isPositive ? "+" : ""}{trendValue}</span>
+                  <span>{typeof trendValue === 'number' ? formatPercentage(trendValue, isPositive) : trendValue}</span>
                 </div>
               )}
 

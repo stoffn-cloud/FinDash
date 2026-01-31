@@ -18,7 +18,9 @@ export default function RiskGauge({
   unit = "",
   description,
 }: RiskGaugeProps) {
-  const percentage = Math.min((value / maxValue) * 100, 100);
+  const safeValue = isNaN(value) || value === null || value === undefined ? 0 : value;
+  const safeMaxValue = maxValue || 1;
+  const percentage = Math.min((safeValue / safeMaxValue) * 100, 100);
 
   const getRiskColor = () => {
     if (percentage < 33)
@@ -62,7 +64,7 @@ export default function RiskGauge({
         </div>
         <div className="text-right">
           <span className={cn("text-2xl font-mono font-bold", colors.text)}>
-            {value.toFixed(2)}
+            {safeValue.toFixed(2)}
             {unit}
           </span>
         </div>

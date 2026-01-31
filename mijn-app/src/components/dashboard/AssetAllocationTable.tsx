@@ -10,6 +10,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ChevronRight, TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatCurrency, formatPercentage } from "@/lib/formatters";
 
 // 1. Definieer het type voor een enkele Asset Class
 export interface AssetClass {
@@ -44,14 +45,6 @@ export default function AssetAllocationTable({
   }
 
   const totalValue = assetClasses.reduce((sum, ac) => sum + (ac.current_value || 0), 0);
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
 
   return (
     <motion.div
@@ -114,7 +107,7 @@ export default function AssetAllocationTable({
                 "text-right font-medium",
                 ac.expected_return >= 0 ? "text-emerald-400" : "text-rose-400"
               )}>
-                {ac.expected_return > 0 ? '+' : ''}{ac.expected_return?.toFixed(1)}%
+                {formatPercentage(ac.expected_return, true, 1)}
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-1">
@@ -124,7 +117,7 @@ export default function AssetAllocationTable({
                     <TrendingDown className="w-3 h-3 text-rose-400" />
                   )}
                   <span className={ac.ytd_return >= 0 ? "text-emerald-400" : "text-rose-400"}>
-                    {ac.ytd_return?.toFixed(1)}%
+                    {formatPercentage(ac.ytd_return, false, 1)}
                   </span>
                 </div>
               </TableCell>
