@@ -175,7 +175,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <AnimatePresence mode="wait">
+            <AnimatePresence mode="popLayout">
               <TabsContent value="dashboard" key="dashboard">
                 <DashboardContent 
                   assetClasses={portfolio.assetClasses || []} 
