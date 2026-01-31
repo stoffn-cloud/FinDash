@@ -1,8 +1,9 @@
 import { motion } from "framer-motion";
 import { Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatPercentage } from "@/lib/formatters";
 
-// Flags voor regio's en landen
+// Flags en kleuren voor regio's en landen
 const REGION_FLAGS: Record<string, string> = {
   "Global": "🌍",
   "North America": "🌎",
@@ -134,7 +135,7 @@ export default function GeographicBreakdown({ assetClasses = [] }: GeographicBre
                 <span className="font-bold text-slate-200">{item.region}</span>
               </div>
               <span className="text-sm font-mono text-blue-400 font-bold">
-                {item.percentage.toFixed(1)}%
+                {formatPercentage(item.percentage, false, 1)}
               </span>
             </div>
 
@@ -146,7 +147,7 @@ export default function GeographicBreakdown({ assetClasses = [] }: GeographicBre
                     <span>{COUNTRY_FLAGS[country.name] ?? "🏳️"}</span>
                     <span>{country.name}</span>
                   </div>
-                  <span className="text-slate-500 font-medium">{country.percentage.toFixed(1)}%</span>
+                  <span className="text-slate-500 font-medium">{formatPercentage(country.percentage, false, 1)}</span>
                 </div>
               ))}
             </div>

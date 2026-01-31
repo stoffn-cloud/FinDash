@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, TooltipProps } from "recharts";
 import { cn } from "@/lib/utils";
+import { formatPercentage } from "@/lib/formatters";
 
 // ---------------------- TYPES ----------------------
 interface Sector {
@@ -37,7 +38,7 @@ const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
         </p>
         <div className="flex items-center gap-2">
           <span className="text-emerald-400 font-mono font-bold">
-            {data.percentage.toFixed(1)}%
+            {formatPercentage(data.percentage, false, 1)}
           </span>
           <span className="text-slate-500 text-[10px]">van totaal</span>
         </div>
@@ -117,7 +118,7 @@ export default function SectorChart({ sectors }: SectorChartProps) {
                 </span>
               </div>
               <span className="text-[11px] font-mono font-bold text-white">
-                {sector.percentage.toFixed(1)}%
+                {formatPercentage(sector.percentage, false, 1)}
               </span>
             </div>
           ))}

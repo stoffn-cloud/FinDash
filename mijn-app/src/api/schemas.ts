@@ -45,6 +45,17 @@ export const CurrencyAllocationSchema = z.object({
   value: z.number(),
 });
 
+export const TransactionSchema = z.object({
+  id: z.union([z.string(), z.number()]),
+  date: z.string().optional(),
+  type: z.enum(["buy", "sell", "dividend", "deposit", "withdrawal", "fee"]),
+  asset_name: z.string().optional(),
+  ticker: z.string().optional(),
+  quantity: z.number().optional(),
+  price: z.number().optional(),
+  total_amount: z.number(),
+});
+
 export const PortfolioSchema = z.object({
   name: z.string(),
   totalValue: z.number(),
@@ -55,6 +66,7 @@ export const PortfolioSchema = z.object({
   sectorAllocation: z.array(SectorAllocationSchema).optional().default([]),
   currencyAllocation: z.array(CurrencyAllocationSchema).optional().default([]),
   assetClasses: z.array(AssetClassSchema),
+  transactions: z.array(TransactionSchema).optional().default([]),
 });
 
 export type Portfolio = z.infer<typeof PortfolioSchema>;

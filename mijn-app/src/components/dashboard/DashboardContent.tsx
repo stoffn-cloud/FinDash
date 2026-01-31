@@ -11,6 +11,7 @@ import PerformanceChart from "@/components/dashboard/PerformanceChart";
 import RiskGauge from "@/components/dashboard/RiskGauge";
 import AssetAllocationTable from "@/components/dashboard/AssetAllocationTable";
 import GeographicBreakdown from "@/components/dashboard/GeographicBreakdown";
+import TerminalActivityFeed from "@/components/dashboard/TerminalActivityFeed";
 
 // ------------------------
 // TypeScript interfaces
@@ -51,7 +52,7 @@ interface Portfolio {
 interface DashboardContentProps {
   portfolio?: Portfolio;
   assetClasses?: AssetClass[];
-  setSelectedAssetClass?: (assetClass: AssetClass) => void;
+  onSelectAsset?: (assetClass: AssetClass) => void;
 }
 
 // ------------------------
@@ -60,7 +61,7 @@ interface DashboardContentProps {
 export default function DashboardContent({
   portfolio,
   assetClasses = [],
-  setSelectedAssetClass,
+  onSelectAsset,
 }: DashboardContentProps) {
   if (!portfolio) return null;
 
@@ -72,7 +73,7 @@ export default function DashboardContent({
           title="Totaal Vermogen"
           value={formatCurrency(portfolio.totalValue)}
           icon={Wallet}
-          trend={portfolio.dailyChangePercent && portfolio.dailyChangePercent >= 0 ? "up" : "down"}
+          trend={portfolio.dailyChangePercent === undefined ? "neutral" : portfolio.dailyChangePercent >= 0 ? "up" : "down"}
           trendValue={portfolio.dailyChangePercent}
           subtitle="Huidige liquidatiewaarde"
           className=""
@@ -83,7 +84,7 @@ export default function DashboardContent({
           title="YTD Rendement"
           value={formatPercentage(portfolio.ytdReturn, true)}
           icon={TrendingUp}
-          trend={portfolio.ytdReturn && portfolio.ytdReturn >= 0 ? "up" : "down"}
+          trend={portfolio.ytdReturn === undefined ? "neutral" : portfolio.ytdReturn >= 0 ? "up" : "down"}
           trendValue={portfolio.ytdReturn}
           subtitle="Rendement sinds 1 jan"
           className=""
@@ -125,7 +126,7 @@ export default function DashboardContent({
           {/* FIX: fallback naar lege array voorkomt never[] error */}
           <AssetAllocationTable
             assetClasses={assetClasses || []}
-            onSelectAsset={setSelectedAssetClass}
+            onSelectAsset={onSelectAsset}
           />
         </div>
         <div className="space-y-6">
@@ -151,8 +152,11 @@ export default function DashboardContent({
         <CurrencyBreakdown currencies={portfolio.currencyAllocation || []} />
       </div>
 
-      {/* Wereldkaart */}
-      <GeographicBreakdown assetClasses={assetClasses || []} />
+      {/* Wereldkaart en Activity Feed */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <GeographicBreakdown assetClasses={assetClasses || []} />
+        <TerminalActivityFeed />
+      </div>
     </div>
   );
 }

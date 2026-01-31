@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Globe } from "lucide-react";
+import { formatCurrency, formatPercentage } from "@/lib/formatters";
 
 // Flags en kleuren
 const CURRENCY_FLAGS: Record<string, string> = {
@@ -83,7 +84,7 @@ export default function CurrencyBreakdown({ currencies = [] }: CurrencyBreakdown
               <div>
                 <p className="text-sm font-bold text-white leading-none">{currency.code}</p>
                 <p className="text-[10px] text-slate-500 mt-1 uppercase">
-                  {currency.value >= 1000 ? `$${(currency.value / 1000).toFixed(1)}K` : `$${currency.value}`}
+                  {formatCurrency(currency.value)}
                 </p>
               </div>
             </div>
@@ -101,7 +102,7 @@ export default function CurrencyBreakdown({ currencies = [] }: CurrencyBreakdown
                 />
               </div>
               <span className="text-sm font-mono font-medium text-slate-300 w-12 text-right">
-                {currency.percentage.toFixed(1)}%
+                {formatPercentage(currency.percentage, false, 1)}
               </span>
             </div>
           </div>

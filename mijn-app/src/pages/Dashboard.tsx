@@ -193,7 +193,7 @@ export default function Dashboard() {
             <div className="sticky top-6 z-40">
               <div className="p-1 bg-slate-950/60 backdrop-blur-xl border border-slate-800/50 rounded-2xl shadow-2xl inline-block">
                 <TabsList className="bg-transparent border-none gap-1">
-                  <NavTrigger value="dashboard" icon={LayoutDashboard} label="Overview" />
+                  <NavTrigger value="dashboard" icon={LayoutDashboard} label="Dashboard" />
                   <NavTrigger value="assets" icon={Grid3X3} label="Asset Classes" />
                   <NavTrigger value="transactions" icon={History} label="History" />
                   <NavTrigger value="markets" icon={Globe} label="Markets" />
@@ -206,21 +206,101 @@ export default function Dashboard() {
 
             <ErrorBoundary>
               <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeTab}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <TabsContent value="dashboard"><DashboardContent portfolio={portfolio} assetClasses={assetClasses} onSelectAsset={setSelectedAssetClass} /></TabsContent>
-                  <TabsContent value="assets"><CorrelationsTab portfolio={portfolio} /></TabsContent>
-                  <TabsContent value="transactions"><TransactionHistory /></TabsContent>
-                  <TabsContent value="markets"><MarketsTab /></TabsContent>
-                  <TabsContent value="calendar"><CalendarTab /></TabsContent>
-                  <TabsContent value="sandbox"><SandboxTab /></TabsContent>
-                  <TabsContent value="calculations"><CalculationsTab /></TabsContent>
-                </motion.div>
+                {activeTab === "dashboard" && (
+                  <TabsContent value="dashboard" forceMount>
+                    <motion.div
+                      key="dashboard"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <DashboardContent
+                        portfolio={portfolio}
+                        assetClasses={assetClasses}
+                        onSelectAsset={setSelectedAssetClass}
+                      />
+                    </motion.div>
+                  </TabsContent>
+                )}
+                {activeTab === "assets" && (
+                  <TabsContent value="assets" forceMount>
+                    <motion.div
+                      key="assets"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <CorrelationsTab portfolio={portfolio} assetClasses={assetClasses} />
+                    </motion.div>
+                  </TabsContent>
+                )}
+                {activeTab === "transactions" && (
+                  <TabsContent value="transactions" forceMount>
+                    <motion.div
+                      key="transactions"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <TransactionHistory transactions={portfolio?.transactions || []} />
+                    </motion.div>
+                  </TabsContent>
+                )}
+                {activeTab === "markets" && (
+                  <TabsContent value="markets" forceMount>
+                    <motion.div
+                      key="markets"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <MarketsTab />
+                    </motion.div>
+                  </TabsContent>
+                )}
+                {activeTab === "calendar" && (
+                  <TabsContent value="calendar" forceMount>
+                    <motion.div
+                      key="calendar"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <CalendarTab />
+                    </motion.div>
+                  </TabsContent>
+                )}
+                {activeTab === "sandbox" && (
+                  <TabsContent value="sandbox" forceMount>
+                    <motion.div
+                      key="sandbox"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <SandboxTab />
+                    </motion.div>
+                  </TabsContent>
+                )}
+                {activeTab === "calculations" && (
+                  <TabsContent value="calculations" forceMount>
+                    <motion.div
+                      key="calculations"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <CalculationsTab />
+                    </motion.div>
+                  </TabsContent>
+                )}
               </AnimatePresence>
             </ErrorBoundary>
           </Tabs>

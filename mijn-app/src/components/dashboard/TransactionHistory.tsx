@@ -19,6 +19,7 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/formatters";
 
 // ---------------------- TYPES ----------------------
 type TransactionType = "buy" | "sell" | "dividend" | "deposit" | "withdrawal" | "fee";
@@ -57,14 +58,6 @@ interface TransactionHistoryProps {
 }
 
 export default function TransactionHistory({ transactions = [] }: TransactionHistoryProps) {
-
-  const formatCurrency = (value?: number) => {
-    return new Intl.NumberFormat('en-US', { 
-      style: 'currency', 
-      currency: 'USD',
-      minimumFractionDigits: 2 
-    }).format(value ?? 0);
-  };
 
   if (transactions.length === 0) {
     return (

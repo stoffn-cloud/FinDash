@@ -20,6 +20,7 @@ import {
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, TooltipProps } from "recharts";
 import { cn } from "@/lib/utils";
 import { AssetClass } from "./AssetAllocationTable"; // Importeer de interface die we eerder maakten
+import { formatCurrency, formatPercentage } from "@/lib/formatters";
 
 // 1. Definieer de interface voor een Holding
 interface Holding {
@@ -68,14 +69,6 @@ export default function AssetClassDetail({ assetClass, onClose }: AssetClassDeta
 
   const holdings = assetClass.holdings || [];
   
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      maximumFractionDigits: 0,
-    }).format(value || 0);
-  };
-
   const sharpeRatio = assetClass.volatility 
     ? ((assetClass.expected_return - 4) / assetClass.volatility).toFixed(2) 
     : "0.00";
@@ -108,7 +101,7 @@ export default function AssetClassDetail({ assetClass, onClose }: AssetClassDeta
               <div>
                 <h2 className="text-2xl font-bold text-white">{assetClass.name}</h2>
                 <p className="text-slate-400 mt-1">
-                  {assetClass.allocation_percent?.toFixed(1)}% van portfolio · {formatCurrency(assetClass.current_value)}
+                  {formatPercentage(assetClass.allocation_percent, false, 1)} van portfolio · {formatCurrency(assetClass.current_value)}
                 </p>
               </div>
             </div>
@@ -123,17 +116,17 @@ export default function AssetClassDetail({ assetClass, onClose }: AssetClassDeta
               <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
                 <p className="text-slate-400 text-sm flex items-center gap-2 mb-2"><Target className="w-4 h-4" /> Return</p>
                 <p className={cn("text-2xl font-bold", assetClass.expected_return >= 0 ? "text-emerald-400" : "text-rose-400")}>
-                  {assetClass.expected_return > 0 ? '+' : ''}{assetClass.expected_return?.toFixed(1)}%
+                  {formatPercentage(assetClass.expected_return, true, 1)}
                 </p>
               </div>
               <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
                 <p className="text-slate-400 text-sm flex items-center gap-2 mb-2"><Activity className="w-4 h-4" /> Volatiliteit</p>
-                <p className="text-2xl font-bold text-amber-400">{assetClass.volatility?.toFixed(1)}%</p>
+                <p className="text-2xl font-bold text-amber-400">{formatPercentage(assetClass.volatility, false, 1)}</p>
               </div>
               <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
                 <p className="text-slate-400 text-sm mb-2">YTD Return</p>
                 <p className={cn("text-2xl font-bold", assetClass.ytd_return >= 0 ? "text-emerald-400" : "text-rose-400")}>
-                  {assetClass.ytd_return > 0 ? '+' : ''}{assetClass.ytd_return?.toFixed(1)}%
+                  {formatPercentage(assetClass.ytd_return, true, 1)}
                 </p>
               </div>
               <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
@@ -182,10 +175,10 @@ export default function AssetClassDetail({ assetClass, onClose }: AssetClassDeta
                                 <div>{holding.name} <span className="text-slate-500 text-xs ml-1">{holding.ticker}</span></div>
                               </div>
                             </TableCell>
-                            <TableCell className="text-right text-slate-300">{holding.weight?.toFixed(1)}%</TableCell>
+                            <TableCell className="text-right text-slate-300">{formatPercentage(holding.weight, false, 1)}</TableCell>
                             <TableCell className="text-right text-white">{formatCurrency(holding.value)}</TableCell>
                             <TableCell className={cn("text-right font-medium", holding.return_ytd >= 0 ? "text-emerald-400" : "text-rose-400")}>
-                              {holding.return_ytd?.toFixed(1)}%
+                              {formatPercentage(holding.return_ytd, true, 1)}
                             </TableCell>
                           </TableRow>
                         ))}
@@ -204,11 +197,11 @@ export default function AssetClassDetail({ assetClass, onClose }: AssetClassDeta
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <p className="text-sm text-slate-400 mb-2">Max Drawdown (Est.)</p>
-                  <p className="text-xl font-bold text-rose-400">-{((assetClass.volatility || 0) * 2.5).toFixed(1)}%</p>
+                  <p className="text-xl font-bold text-rose-400">-{formatPercentage((assetClass.volatility || 0) * 2.5, false, 1)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-slate-400 mb-2">Value at Risk (95%)</p>
-                  <p className="text-xl font-bold text-amber-400">-{((assetClass.volatility || 0) * 0.5).toFixed(1)}%</p>
+                  <p className="text-xl font-bold text-amber-400">-{formatPercentage((assetClass.volatility || 0) * 0.5, false, 1)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-slate-400 mb-2">Sharpe Score</p>

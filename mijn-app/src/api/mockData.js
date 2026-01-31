@@ -78,5 +78,12 @@ export const mockPortfolio = {
         { name: "EUR Cash", ticker: "EUR", weight: 40, value: 10000, return_ytd: 0.5, volatility: 0.1, region: "Europe", country: "Germany" }
       ]
     }
+  ],
+  transactions: [
+    { id: 1, date: "2024-12-15", type: "buy", asset_name: "Apple Inc.", ticker: "AAPL", quantity: 10, price: 195.50, total_amount: 1955.00 },
+    { id: 2, date: "2024-12-12", type: "dividend", asset_name: "Microsoft", ticker: "MSFT", total_amount: 125.40 },
+    { id: 3, date: "2024-12-10", type: "sell", asset_name: "Gold Physical", ticker: "GOLD", quantity: 5, price: 2050.00, total_amount: 10250.00 },
+    { id: 4, date: "2024-12-05", type: "deposit", total_amount: 5000.00 },
+    { id: 5, date: "2024-11-28", type: "buy", asset_name: "ASML Holding", ticker: "ASML", quantity: 2, price: 650.00, total_amount: 1300.00 },
   ]
 };
