@@ -43,16 +43,18 @@ import SandboxTab from "@/components/dashboard/SandboxTab";
 import CalculationsTab from "@/components/dashboard/CalculationsTab";
 import AssetClassDetail from "@/components/dashboard/AssetClassDetail";
 
+import { Portfolio, AssetClass } from "@/types/dashboard";
+
 // Data Import
 import { mockPortfolio } from "@/api/mockData";
 
 export default function Dashboard() {
-  const [selectedAssetClass, setSelectedAssetClass] = useState(null);
+  const [selectedAssetClass, setSelectedAssetClass] = useState<AssetClass | null>(null);
   const [isCommandOpen, setIsCommandOpen] = useState(false);
 
   // Keyboard shortcut voor de Search (Cmd+K)
   useEffect(() => {
-    const down = (e) => {
+    const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         setIsCommandOpen((open) => !open);
@@ -165,7 +167,7 @@ export default function Dashboard() {
             </div>
 
             <AnimatePresence mode="wait">
-              <TabsContent value="dashboard"><DashboardContent portfolio={portfolio} assetClasses={assetClasses} onSelectAsset={setSelectedAssetClass} /></TabsContent>
+              <TabsContent value="dashboard"><DashboardContent portfolio={portfolio as Portfolio} assetClasses={assetClasses as AssetClass[]} onSelectAsset={setSelectedAssetClass} /></TabsContent>
               <TabsContent value="assets"><CorrelationsTab portfolio={portfolio} /></TabsContent>
               <TabsContent value="transactions"><TransactionHistory /></TabsContent>
               <TabsContent value="markets"><MarketsTab /></TabsContent>
@@ -196,15 +198,20 @@ export default function Dashboard() {
       {/* Detail Modal */}
       <AssetClassDetail 
         assetClass={selectedAssetClass} 
-        isOpen={!!selectedAssetClass} 
         onClose={() => setSelectedAssetClass(null)} 
       />
     </div>
   );
 }
 
+interface NavTriggerProps {
+  value: string;
+  icon: React.ElementType;
+  label: string;
+}
+
 // Helper component for cleaner TabsList
-function NavTrigger({ value, icon: Icon, label }) {
+function NavTrigger({ value, icon: Icon, label }: NavTriggerProps) {
   return (
     <TabsTrigger 
       value={value} 

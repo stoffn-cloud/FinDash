@@ -1,6 +1,6 @@
 "use client"
 
-import { useToast, type Toast as ToastType } from "@/hooks/use-toast"
+import { useToast, type ToasterToast as ToastType } from "@/components/ui/use-toast"
 import {
   Toast,
   ToastClose,

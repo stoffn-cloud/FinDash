@@ -5,7 +5,7 @@ import * as React from "react";
 const TOAST_LIMIT = 5; // Minder toasts tegelijk houdt de terminal overzichtelijk
 const TOAST_REMOVE_DELAY = 5000; // 5 seconden is standaard voor leesbaarheid
 
-type ToasterToast = {
+export type ToasterToast = {
   id: string;
   title?: React.ReactNode;
   description?: React.ReactNode;
