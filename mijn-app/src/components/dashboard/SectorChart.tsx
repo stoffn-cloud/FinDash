@@ -104,7 +104,7 @@ export default function SectorChart({ sectors }: SectorChartProps) {
         <div className="flex-1 w-full space-y-1.5 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
           {sectors.map((sector, index) => (
             <div 
-              key={sector.name} 
+              key={`${sector.name}-${index}`}
               className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-slate-800/40 transition-colors group"
             >
               <div className="flex items-center gap-3">
@@ -124,21 +124,6 @@ export default function SectorChart({ sectors }: SectorChartProps) {
         </div>
       </div>
 
-      <style jsx>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #1e293b;
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #334155;
-        }
-      `}</style>
     </motion.div>
   );
 }

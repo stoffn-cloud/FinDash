@@ -117,7 +117,7 @@ export default function PerformanceChart({
       </div>
 
       {/* Chart */}
-      <div className="h-80 w-full">
+      <div className="h-80 w-full min-h-[320px]">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={normalizedData}>
             <defs>

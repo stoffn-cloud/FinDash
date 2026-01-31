@@ -49,6 +49,7 @@ import { mockPortfolio } from "@/api/mockData";
 export default function Dashboard() {
   const [selectedAssetClass, setSelectedAssetClass] = useState(null);
   const [isCommandOpen, setIsCommandOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("dashboard");
 
   // Keyboard shortcut voor de Search (Cmd+K)
   useEffect(() => {
@@ -149,7 +150,7 @@ export default function Dashboard() {
           </header>
 
           {/* Navigation Tabs */}
-          <Tabs defaultValue="dashboard" className="space-y-8">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
             <div className="sticky top-6 z-40">
               <div className="p-1 bg-slate-950/60 backdrop-blur-xl border border-slate-800/50 rounded-2xl shadow-2xl inline-block">
                 <TabsList className="bg-transparent border-none gap-1">
@@ -165,13 +166,21 @@ export default function Dashboard() {
             </div>
 
             <AnimatePresence mode="wait">
-              <TabsContent value="dashboard"><DashboardContent portfolio={portfolio} assetClasses={assetClasses} onSelectAsset={setSelectedAssetClass} /></TabsContent>
-              <TabsContent value="assets"><CorrelationsTab portfolio={portfolio} /></TabsContent>
-              <TabsContent value="transactions"><TransactionHistory /></TabsContent>
-              <TabsContent value="markets"><MarketsTab /></TabsContent>
-              <TabsContent value="calendar"><CalendarTab /></TabsContent>
-              <TabsContent value="sandbox"><SandboxTab /></TabsContent>
-              <TabsContent value="calculations"><CalculationsTab /></TabsContent>
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+              >
+                <TabsContent value="dashboard"><DashboardContent portfolio={portfolio} assetClasses={assetClasses} onSelectAsset={setSelectedAssetClass} /></TabsContent>
+                <TabsContent value="assets"><CorrelationsTab portfolio={portfolio} /></TabsContent>
+                <TabsContent value="transactions"><TransactionHistory /></TabsContent>
+                <TabsContent value="markets"><MarketsTab /></TabsContent>
+                <TabsContent value="calendar"><CalendarTab /></TabsContent>
+                <TabsContent value="sandbox"><SandboxTab /></TabsContent>
+                <TabsContent value="calculations"><CalculationsTab /></TabsContent>
+              </motion.div>
             </AnimatePresence>
           </Tabs>
         </div>

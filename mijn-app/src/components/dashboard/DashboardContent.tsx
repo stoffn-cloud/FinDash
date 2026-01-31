@@ -79,7 +79,7 @@ export default function DashboardContent({
           value={formatCurrency(portfolio.totalValue)}
           icon={Wallet}
           trend={portfolio.dailyChangePercent && portfolio.dailyChangePercent >= 0 ? "up" : "down"}
-          trendValue={`${portfolio.dailyChangePercent && portfolio.dailyChangePercent >= 0 ? '+' : ''}${portfolio.dailyChangePercent?.toFixed(2) || "0"}%`}
+          trendValue={`${portfolio.dailyChangePercent?.toFixed(2) || "0"}%`}
           subtitle="Huidige liquidatiewaarde"
           className=""
           delay={0}
@@ -90,7 +90,7 @@ export default function DashboardContent({
           value={`${portfolio.ytdReturn && portfolio.ytdReturn >= 0 ? '+' : ''}${portfolio.ytdReturn?.toFixed(2) || "0"}%`}
           icon={TrendingUp}
           trend={portfolio.ytdReturn && portfolio.ytdReturn >= 0 ? "up" : "down"}
-          trendValue={`${portfolio.ytdReturn && portfolio.ytdReturn >= 0 ? '+' : ''}${portfolio.ytdReturn?.toFixed(2) || "0"}%`}
+          trendValue={`${portfolio.ytdReturn?.toFixed(2) || "0"}%`}
           subtitle="Rendement sinds 1 jan"
           className=""
           delay={0.1}

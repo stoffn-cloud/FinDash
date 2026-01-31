@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 
 // 1. Definieer het type voor een enkele Asset Class
 export interface AssetClass {
+  id: string;
   name: string;
   allocation_percent: number;
   current_value: number;
@@ -67,9 +68,9 @@ export default function AssetAllocationTable({
 
       <div className="px-6 py-4 border-b border-slate-700/50 bg-slate-900/20">
         <div className="h-3 rounded-full overflow-hidden flex bg-slate-800">
-          {assetClasses.map((ac, index) => (
+          {assetClasses.map((ac) => (
             <motion.div
-              key={index}
+              key={ac.id}
               initial={{ width: 0 }}
               animate={{ width: `${ac.allocation_percent || 0}%` }}
               className="h-full"
@@ -91,9 +92,9 @@ export default function AssetAllocationTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {assetClasses.map((ac, index) => (
+          {assetClasses.map((ac) => (
             <TableRow
-              key={index}
+              key={ac.id}
               onClick={() => onSelectAsset && onSelectAsset(ac)}
               className="border-slate-700/50 cursor-pointer hover:bg-slate-800/50 group"
             >
