@@ -44,12 +44,12 @@ import AssetClassDetail from "@/components/dashboard/AssetClassDetail";
 // Data Import
 import { mockPortfolio } from "@/api/mockData";
 
-// ------------------- TYPES (EENDUIDIG) -------------------
+// ------------------- TYPES -------------------
 interface AssetClass {
   id: string;
   name: string;
-  value: number;         // Matcht met nieuwe mockData
-  percentage: number;    // Matcht met nieuwe mockData
+  value: number;
+  percentage: number;
   expected_return: number;
   ytd_return: number;
   color: string;
@@ -72,7 +72,7 @@ interface Portfolio {
   performanceHistory: any[];
 }
 
-// ------------------- COMPONENT -------------------
+// ------------------- MAIN COMPONENT -------------------
 export default function Dashboard() {
   const [selectedAssetClass, setSelectedAssetClass] = useState<AssetClass | null>(null);
   const [isCommandOpen, setIsCommandOpen] = useState(false);
@@ -96,7 +96,6 @@ export default function Dashboard() {
     },
   });
 
-  // ------------------- LOADING & ERROR STATE -------------------
   if (isLoading || !portfolio) {
     return (
       <div className="min-h-screen bg-[#020617] p-6 md:p-10">
@@ -116,10 +115,8 @@ export default function Dashboard() {
     );
   }
 
-  // ------------------- MAIN RENDER -------------------
   return (
     <div className="min-h-screen bg-[#020617] text-slate-200 selection:bg-blue-500/30">
-      {/* Background Glows */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <motion.div 
           animate={{ scale: [1, 1.1, 1], opacity: [0.05, 0.08, 0.05] }}
@@ -136,7 +133,6 @@ export default function Dashboard() {
       <div className="relative z-10 p-4 md:p-10">
         <div className="max-w-7xl mx-auto space-y-8">
           
-          {/* Header */}
           <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
               <div className="flex items-center gap-2 mb-2">
@@ -152,29 +148,18 @@ export default function Dashboard() {
             </motion.div>
             
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsCommandOpen(true)}
-                className="bg-slate-900/40 border-slate-800 text-slate-400"
-              >
+              <Button variant="outline" size="sm" onClick={() => setIsCommandOpen(true)} className="bg-slate-900/40 border-slate-800 text-slate-400">
                 <Search className="w-4 h-4 mr-2" />
                 <span className="mr-4">Search...</span>
                 <kbd className="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">⌘K</kbd>
               </Button>
-              <Button
-                variant="default"
-                onClick={() => refetch()}
-                disabled={isFetching}
-                className="bg-blue-600 hover:bg-blue-500"
-              >
+              <Button variant="default" onClick={() => refetch()} disabled={isFetching} className="bg-blue-600 hover:bg-blue-500">
                 <RefreshCw className={cn("w-4 h-4 mr-2", isFetching && "animate-spin")} />
                 Sync
               </Button>
             </div>
           </header>
 
-          {/* Navigation Tabs */}
           <Tabs defaultValue="dashboard" className="space-y-8">
             <div className="sticky top-6 z-40">
               <div className="p-1 bg-slate-950/60 backdrop-blur-xl border border-slate-800/50 rounded-2xl shadow-2xl inline-block">
@@ -193,8 +178,7 @@ export default function Dashboard() {
             <AnimatePresence mode="wait">
               <TabsContent value="dashboard" key="dashboard">
                 <DashboardContent 
-                  portfolio={portfolio} 
-                  assetClasses={portfolio.assetClasses} 
+                  assetClasses={portfolio.assetClasses || []} 
                   onSelectAsset={setSelectedAssetClass} 
                 />
               </TabsContent>
@@ -227,7 +211,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Global Command Menu */}
       <CommandDialog open={isCommandOpen} onOpenChange={setIsCommandOpen}>
         <CommandInput placeholder="Search assets, tools or pages..." />
         <CommandList>
@@ -239,7 +222,6 @@ export default function Dashboard() {
         </CommandList>
       </CommandDialog>
 
-      {/* Detail Modal */}
       <AssetClassDetail 
         assetClass={selectedAssetClass} 
         isOpen={!!selectedAssetClass} 
@@ -249,14 +231,7 @@ export default function Dashboard() {
   );
 }
 
-// ------------------- NavTrigger -------------------
-interface NavTriggerProps {
-  value: string;
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-}
-
-function NavTrigger({ value, icon: Icon, label }: NavTriggerProps) {
+function NavTrigger({ value, icon: Icon, label }: { value: string; icon: any; label: string }) {
   return (
     <TabsTrigger 
       value={value} 
