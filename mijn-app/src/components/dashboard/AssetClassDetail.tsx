@@ -4,11 +4,9 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   X, 
-  TrendingUp, 
-  TrendingDown, 
-  Activity, 
   Target,
-  PieChart as PieChartIcon 
+  PieChart as PieChartIcon,
+  Activity
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,10 +18,11 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, TooltipProps } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { cn } from "@/lib/utils";
+import { AssetClass } from "./AssetAllocationTable"; // Importeer de interface die we eerder maakten
 
-// We importeren de basis interface en breiden deze lokaal uit
+// 1. Definieer de interface voor een Holding
 interface Holding {
   name: string;
   ticker: string;
@@ -32,23 +31,15 @@ interface Holding {
   return_ytd: number;
 }
 
-interface ExtendedAssetClass {
-  name: string;
-  allocation_percent?: number;
-  allocation?: number;
-  current_value?: number;
-  value?: number;
-  expected_return: number;
-  ytd_return: number;
-  color: string;
-  volatility?: number;
+// 2. Breid de AssetClass uit met holdings (als dat nog niet gebeurd was)
+interface ExtendedAssetClass extends AssetClass {
   holdings?: Holding[];
+  volatility?: number;
 }
 
 // HIER ZAT DE FIX: isOpen toegevoegd aan de props
 interface AssetClassDetailProps {
   assetClass: ExtendedAssetClass | null;
-  isOpen: boolean; 
   onClose: () => void;
 }
 
@@ -57,8 +48,8 @@ const HOLDING_COLORS = [
   "#06B6D4", "#F97316", "#6366F1", "#84CC16", "#14B8A6"
 ];
 
-// We vervangen de strikte TooltipProps door een lossere definitie
-const CustomTooltip = ({ active, payload }: any) => {
+// 3. Fix de 'any' error door TooltipProps te gebruiken van recharts
+const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
   if (active && payload && payload.length) {
     // We pakken de data direct uit de eerste entry van de lijst
     const item = payload[0].payload;

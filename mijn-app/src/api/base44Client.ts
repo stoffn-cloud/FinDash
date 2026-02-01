@@ -3,7 +3,7 @@ import { mockPortfolio } from "./mockData";
 // We maken een universele "nep" client die altijd jouw data teruggeeft
 export const base44 = {
   // Dit simuleert de data-ophaler die je dashboard gebruikt
-  useQuery: (key) => {
+  useQuery: (key: any) => {
     console.log("Dashboard vraagt data op voor:", key);
     return {
       data: mockPortfolio,
@@ -14,7 +14,7 @@ export const base44 = {
   },
   
   // Mocht de code directe API-calls doen (async/await)
-  get: async (path) => {
+  get: async (path: string) => {
     return mockPortfolio;
   }
 };

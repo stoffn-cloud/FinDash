@@ -47,7 +47,7 @@
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "latest",
     "input-otp": "^1.4.2",
-    "lucide-react": "^0.563.0",
+    "lucide-react": "latest",
     "react": "latest",
     "react-day-picker": "^9.13.0",
     "react-dom": "latest",
@@ -69,7 +69,7 @@
     "eslint-plugin-react-refresh": "latest",
     "globals": "latest",
     "postcss": "latest",
-    "tailwindcss": "^4.1.18",
+    "tailwindcss": "latest",
     "vite": "latest"
   }
 }
