@@ -1,11 +1,9 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   X, 
-  TrendingUp, 
-  TrendingDown, 
-  Activity, 
   Target,
-  PieChart as PieChartIcon 
+  PieChart as PieChartIcon,
+  Activity
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,9 +15,9 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, TooltipContentProps } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { cn } from "@/lib/utils";
-import { AssetClass, Holding } from "@/types/dashboard";
+import type { AssetClass, Holding } from "@/types/dashboard";
 
 interface AssetClassDetailProps {
   assetClass: AssetClass | null;
@@ -31,8 +29,7 @@ const HOLDING_COLORS = [
   "#06B6D4", "#F97316", "#6366F1", "#84CC16", "#14B8A6"
 ];
 
-// 3. Fix de 'any' error door TooltipContentProps te gebruiken van recharts
-const CustomTooltip = ({ active, payload }: TooltipContentProps<number, string>) => {
+const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload as Holding;
     return (
@@ -144,7 +141,7 @@ export default function AssetClassDetail({ assetClass, onClose }: AssetClassDeta
                             <Cell key={index} fill={HOLDING_COLORS[index % HOLDING_COLORS.length]} />
                           ))}
                         </Pie>
-                        <Tooltip content={CustomTooltip} />
+                        <Tooltip content={<CustomTooltip />} />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>

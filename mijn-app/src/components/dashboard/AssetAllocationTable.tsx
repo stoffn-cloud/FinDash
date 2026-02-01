@@ -10,26 +10,17 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ChevronRight, TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-// 1. Definieer het type voor een enkele Asset Class
-export interface AssetClass {
-  name: string;
-  allocation_percent: number;
-  current_value: number;
-  expected_return: number;
-  ytd_return: number;
-  color: string;
-}
+import type { AssetClass } from "@/types/dashboard";
 
 // 2. Definieer de Props voor het component
 interface AssetAllocationTableProps {
   assetClasses?: AssetClass[];
-  onSelectAsset?: (asset: AssetClass) => void;
+  onAssetClick?: (asset: AssetClass) => void;
 }
 
 export default function AssetAllocationTable({ 
   assetClasses = [], 
-  onSelectAsset 
+  onAssetClick
 }: AssetAllocationTableProps) {
   
   // Veiligheidscheck
@@ -94,7 +85,7 @@ export default function AssetAllocationTable({
           {assetClasses.map((ac, index) => (
             <TableRow
               key={index}
-              onClick={() => onSelectAsset && onSelectAsset(ac)}
+              onClick={() => onAssetClick && onAssetClick(ac)}
               className="border-slate-700/50 cursor-pointer hover:bg-slate-800/50 group"
             >
               <TableCell className="font-medium text-white">

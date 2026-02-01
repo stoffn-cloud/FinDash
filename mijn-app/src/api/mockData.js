@@ -44,7 +44,6 @@ export const mockPortfolio = {
       allocation_percent: 64.0,
       expected_return: 12.5,
       ytd_return: 14.2,
-      volatility: 18.5,
       color: "#3B82F6",
       holdings: [
         { name: "Apple Inc.", ticker: "AAPL", weight: 45, value: 36000, return_ytd: 12.4, volatility: 22.0, region: "North America", country: "USA" },
