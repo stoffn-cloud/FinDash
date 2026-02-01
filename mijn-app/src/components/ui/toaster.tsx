@@ -1,6 +1,6 @@
 "use client"
 
-import { useToast, type ToasterToast as ToastType } from "@/components/ui/use-toast"
+import { useToast } from "@/components/ui/use-toast"
 import {
   Toast,
   ToastClose,
@@ -16,7 +16,7 @@ export function Toaster() {
   return (
     <ToastProvider swipeDirection="right">
       {toasts.map(
-        ({ id, title, description, action, ...props }: ToastType) => (
+        ({ id, title, description, action, ...props }) => (
           <Toast key={id} {...props} className="mb-2">
             <div className="flex flex-col gap-0.5">
               {title && <ToastTitle>{title}</ToastTitle>}

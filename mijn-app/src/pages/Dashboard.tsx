@@ -1,224 +1,230 @@
-"use client";
-
-import React, { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
 import { 
-  Wallet, 
-  RefreshCw,
+  Bell,
+  Settings,
   LayoutDashboard,
+  PieChart as PieChartIcon,
   History,
-  Grid3X3,
-  Globe,
-  Calendar as CalendarIcon,
+  BarChart3,
+  Calendar,
+  Layers,
   Calculator,
-  Search,
-  Settings
+  ChevronDown,
+  ExternalLink,
+  ShieldCheck,
+  Zap,
+  RefreshCcw
 } from "lucide-react";
-
-// Utilities
-import { cn } from "@/lib/utils";
-
-// UI Components
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  CommandDialog,
-  CommandInput,
-  CommandList,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
-  CommandShortcut
-} from "@/components/ui/command";
-
-// Dashboard Secties
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import DashboardContent from "@/components/dashboard/DashboardContent";
-import TransactionHistory from "@/components/dashboard/TransactionHistory";
-import CorrelationsTab from "@/components/dashboard/CorrelationsTab";
-import MarketsTab from "@/components/dashboard/MarketsTab";
-import CalendarTab from "@/components/dashboard/CalendarTab";
-import SandboxTab from "@/components/dashboard/SandboxTab";
-import CalculationsTab from "@/components/dashboard/CalculationsTab";
 import AssetClassDetail from "@/components/dashboard/AssetClassDetail";
-
-import { Portfolio, AssetClass } from "@/types/dashboard";
-
-// Data Import
 import { mockPortfolio } from "@/api/mockData";
+import type { Portfolio, AssetClass } from "@/types/dashboard";
 
 export default function Dashboard() {
   const [selectedAssetClass, setSelectedAssetClass] = useState<AssetClass | null>(null);
-  const [isCommandOpen, setIsCommandOpen] = useState(false);
 
-  // Keyboard shortcut voor de Search (Cmd+K)
-  useEffect(() => {
-    const down = (e: KeyboardEvent) => {
-      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        setIsCommandOpen((open) => !open);
-      }
-    };
-    document.addEventListener("keydown", down);
-    return () => document.removeEventListener("keydown", down);
-  }, []);
-
-  const { data: portfolio, isLoading, refetch, isFetching } = useQuery({
+  const { data: portfolio, refetch, isFetching } = useQuery<Portfolio>({
     queryKey: ["portfolio"],
     queryFn: async () => {
+      // Simuleer vertraging voor de Fintech feel
       await new Promise(resolve => setTimeout(resolve, 800));
-      return mockPortfolio;
+      return mockPortfolio as unknown as Portfolio;
     },
+    initialData: mockPortfolio as unknown as Portfolio
   });
 
-  const assetClasses = portfolio?.assetClasses || [];
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-[#020617] p-6 md:p-10">
-        <div className="max-w-7xl mx-auto space-y-8">
-          <div className="flex justify-between items-center">
-            <Skeleton className="h-10 w-48 bg-slate-800/50 rounded-lg" />
-            <Skeleton className="h-10 w-32 bg-slate-800/50 rounded-lg" />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {[...Array(4)].map((_, i) => (
-              <Skeleton key={i} className="h-32 bg-slate-800/20 rounded-2xl" />
-            ))}
-          </div>
-          <Skeleton className="h-[450px] w-full bg-slate-800/10 rounded-3xl" />
-        </div>
-      </div>
-    );
-  }
+  const handleAssetClick = (asset: AssetClass) => {
+    setSelectedAssetClass(asset);
+  };
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-200 selection:bg-blue-500/30">
-      {/* Background Glows */}
+      {/* Background Gradients */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <motion.div 
-          animate={{ scale: [1, 1.1, 1], opacity: [0.1, 0.2, 0.1] }}
-          transition={{ duration: 10, repeat: Infinity }}
-          className="absolute -top-24 -left-24 w-[500px] h-[500px] bg-blue-600/15 rounded-full blur-[120px]"
-        />
-        <motion.div 
-          animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.2, 0.1] }}
-          transition={{ duration: 15, repeat: Infinity, delay: 2 }}
-          className="absolute top-1/2 -right-24 w-[400px] h-[400px] bg-violet-600/15 rounded-full blur-[120px]"
-        />
+        <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-blue-500/10 blur-[120px] rounded-full" />
+        <div className="absolute top-[20%] -right-[10%] w-[30%] h-[50%] bg-emerald-500/5 blur-[120px] rounded-full" />
+        <div className="absolute -bottom-[10%] left-[20%] w-[50%] h-[30%] bg-blue-600/5 blur-[120px] rounded-full" />
       </div>
 
-      <div className="relative z-10 p-4 md:p-10">
-        <div className="max-w-7xl mx-auto space-y-8">
-          
-          {/* Header */}
-          <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative rounded-full h-2 w-2 bg-emerald-500"></span>
-                </span>
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Terminal v2.0 • Live</span>
-              </div>
-              <h1 className="text-4xl md:text-5xl font-extrabold text-white tracking-tighter italic">
-                {portfolio?.name}
-              </h1>
-            </motion.div>
-            
+      {/* Top Navigation */}
+      <header className="sticky top-0 z-40 border-b border-slate-800/60 bg-slate-950/80 backdrop-blur-md">
+        <div className="max-w-[1600px] mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-8">
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsCommandOpen(true)}
-                className="bg-slate-900/40 border-slate-800 text-slate-400"
-              >
-                <Search className="w-4 h-4 mr-2" />
-                <span className="mr-4">Search...</span>
-                <kbd className="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">⌘K</kbd>
-              </Button>
-              <Button
-                variant="default"
-                onClick={() => refetch()}
-                disabled={isFetching}
-                className="bg-blue-600 hover:bg-blue-500"
-              >
-                <RefreshCw className={cn("w-4 h-4 mr-2", isFetching && "animate-spin")} />
-                Sync
-              </Button>
-            </div>
-          </header>
-
-          {/* Navigation Tabs */}
-          <Tabs defaultValue="dashboard" className="space-y-8">
-            <div className="sticky top-6 z-40">
-              <div className="p-1 bg-slate-950/60 backdrop-blur-xl border border-slate-800/50 rounded-2xl shadow-2xl inline-block">
-                <TabsList className="bg-transparent border-none gap-1">
-                  <NavTrigger value="dashboard" icon={LayoutDashboard} label="Overview" />
-                  <NavTrigger value="assets" icon={Grid3X3} label="Asset Classes" />
-                  <NavTrigger value="transactions" icon={History} label="History" />
-                  <NavTrigger value="markets" icon={Globe} label="Markets" />
-                  <NavTrigger value="calendar" icon={CalendarIcon} label="Calendar" />
-                  <NavTrigger value="sandbox" icon={Wallet} label="Sandbox" />
-                  <NavTrigger value="calculations" icon={Calculator} label="Math" />
-                </TabsList>
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                <ShieldCheck className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-xl font-bold tracking-tight text-white">Quantum Alpha</span>
+              <div className="px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-[10px] text-blue-400 font-mono ml-2 uppercase tracking-widest">
+                v2.0 • LIVE
               </div>
             </div>
 
-            <AnimatePresence mode="wait">
-              <TabsContent value="dashboard"><DashboardContent portfolio={portfolio as Portfolio} assetClasses={assetClasses as AssetClass[]} onSelectAsset={setSelectedAssetClass} /></TabsContent>
-              <TabsContent value="assets"><CorrelationsTab portfolio={portfolio} /></TabsContent>
-              <TabsContent value="transactions"><TransactionHistory /></TabsContent>
-              <TabsContent value="markets"><MarketsTab /></TabsContent>
-              <TabsContent value="calendar"><CalendarTab /></TabsContent>
-              <TabsContent value="sandbox"><SandboxTab /></TabsContent>
-              <TabsContent value="calculations"><CalculationsTab /></TabsContent>
-            </AnimatePresence>
-          </Tabs>
+            <nav className="hidden lg:flex items-center gap-1">
+              {[
+                { label: "Dashboard", icon: LayoutDashboard, active: true },
+                { label: "Markets", icon: BarChart3 },
+                { label: "Portfolio", icon: PieChartIcon },
+                { label: "Strategy", icon: Zap }
+              ].map((item) => (
+                <Button
+                  key={item.label}
+                  variant="ghost"
+                  size="sm"
+                  className={`gap-2 h-9 px-4 ${item.active ? 'bg-slate-900 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+                >
+                  <item.icon className="w-4 h-4" />
+                  <span className="text-xs font-medium">{item.label}</span>
+                </Button>
+              ))}
+            </nav>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="hidden md:flex items-center gap-1 mr-4 px-3 py-1.5 rounded-full bg-emerald-500/5 border border-emerald-500/10">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-[10px] text-emerald-500 font-medium uppercase tracking-wider">Market Open</span>
+            </div>
+
+            <TooltipProvider>
+              <div className="flex items-center gap-1 border-r border-slate-800 pr-3 mr-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 text-slate-400"
+                      onClick={() => refetch()}
+                      disabled={isFetching}
+                    >
+                      <RefreshCcw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Sync Data</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-9 w-9 text-slate-400">
+                      <Bell className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Notifications</TooltipContent>
+                </Tooltip>
+              </div>
+            </TooltipProvider>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="pl-1 pr-2 h-9 hover:bg-slate-900 group">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-7 w-7 border border-slate-700">
+                      <AvatarImage src="https://github.com/shadcn.png" />
+                      <AvatarFallback>JD</AvatarFallback>
+                    </Avatar>
+                    <div className="hidden sm:block text-left">
+                      <p className="text-xs font-medium text-white group-hover:text-blue-400 transition-colors leading-none">John Doe</p>
+                      <p className="text-[10px] text-slate-500 mt-1 uppercase tracking-tighter">Premium Account</p>
+                    </div>
+                    <ChevronDown className="w-3 h-3 text-slate-500" />
+                  </div>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 bg-slate-950 border-slate-800">
+                <DropdownMenuLabel className="text-slate-500 font-normal text-xs uppercase tracking-widest p-3">Account</DropdownMenuLabel>
+                <DropdownMenuSeparator className="bg-slate-800" />
+                <DropdownMenuItem className="gap-2 focus:bg-slate-900 focus:text-white cursor-pointer py-2">
+                  <Settings className="w-4 h-4" /> Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem className="gap-2 focus:bg-slate-900 focus:text-white cursor-pointer py-2">
+                  <Calculator className="w-4 h-4" /> Performance Report
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-slate-800" />
+                <DropdownMenuItem className="gap-2 text-rose-400 focus:bg-rose-500/10 focus:text-rose-400 cursor-pointer py-2">
+                  Log Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
+      </header>
+
+      {/* Main Content Area */}
+      <div className="flex max-w-[1600px] mx-auto">
+        {/* Secondary Sidebar (Navigation Icons) */}
+        <aside className="hidden md:flex flex-col items-center py-6 gap-6 w-16 border-r border-slate-800/40">
+          {[
+            { icon: LayoutDashboard, tooltip: "Overview" },
+            { icon: PieChartIcon, tooltip: "Asset Classes" },
+            { icon: History, tooltip: "Transaction History" },
+            { icon: BarChart3, tooltip: "Markets Analysis" },
+            { icon: Calendar, tooltip: "Economic Calendar" },
+            { icon: Layers, tooltip: "Strategy Builder" },
+            { icon: Calculator, tooltip: "Monte Carlo Sim" }
+          ].map((item, i) => (
+            <TooltipProvider key={i}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-500 hover:text-white hover:bg-slate-900 group">
+                    <item.icon className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">{item.tooltip}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ))}
+        </aside>
+
+        {/* Dashboard Content */}
+        <main className="flex-1 p-4 lg:p-8 min-w-0">
+          <div className="max-w-6xl mx-auto space-y-8">
+            <div className="flex flex-col gap-1">
+              <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
+                Portfolio Dashboard
+                <ExternalLink className="w-4 h-4 text-slate-600" />
+              </h1>
+              <p className="text-slate-400 text-sm">Real-time overzicht van uw Quantum Alpha strategieën en holdings.</p>
+            </div>
+
+            <DashboardContent
+              portfolio={portfolio || (mockPortfolio as unknown as Portfolio)}
+              onAssetClick={handleAssetClick}
+            />
+          </div>
+        </main>
       </div>
 
-      {/* Global Command Menu */}
-      <CommandDialog open={isCommandOpen} onOpenChange={setIsCommandOpen}>
-        <CommandInput placeholder="Search assets, tools or pages..." />
-        <CommandList>
-          <CommandEmpty>No results found.</CommandEmpty>
-          <CommandGroup heading="Navigation">
-            <CommandItem onSelect={() => setIsCommandOpen(false)}>Overview</CommandItem>
-            <CommandItem onSelect={() => setIsCommandOpen(false)}>Portfolio Analysis</CommandItem>
-          </CommandGroup>
-          <CommandGroup heading="Quick Actions">
-            <CommandItem onSelect={() => refetch()}>Refresh Data</CommandItem>
-            <CommandItem>Export CSV</CommandItem>
-          </CommandGroup>
-        </CommandList>
-      </CommandDialog>
-
-      {/* Detail Modal */}
       <AssetClassDetail 
         assetClass={selectedAssetClass} 
         onClose={() => setSelectedAssetClass(null)} 
       />
+
+      <footer className="mt-20 border-t border-slate-900 bg-black/40 py-8">
+        <div className="max-w-[1600px] mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 bg-slate-800 rounded flex items-center justify-center">
+              <ShieldCheck className="w-3 h-3 text-slate-400" />
+            </div>
+            <span className="text-xs text-slate-500">© 2024 Quantum Alpha Portfolio. Secured by End-to-End Encryption.</span>
+          </div>
+          <div className="flex gap-6">
+            <a href="#" className="text-xs text-slate-600 hover:text-slate-400 transition-colors">Documentation</a>
+            <a href="#" className="text-xs text-slate-600 hover:text-slate-400 transition-colors">API Status</a>
+            <a href="#" className="text-xs text-slate-600 hover:text-slate-400 transition-colors">Terms of Service</a>
+          </div>
+        </div>
+      </footer>
     </div>
-  );
-}
-
-interface NavTriggerProps {
-  value: string;
-  icon: React.ElementType;
-  label: string;
-}
-
-// Helper component for cleaner TabsList
-function NavTrigger({ value, icon: Icon, label }: NavTriggerProps) {
-  return (
-    <TabsTrigger 
-      value={value} 
-      className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-widest transition-all"
-    >
-      <Icon className="w-4 h-4 mr-2" />
-      <span className="hidden md:inline">{label}</span>
-    </TabsTrigger>
   );
 }

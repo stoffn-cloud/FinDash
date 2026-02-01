@@ -47,23 +47,21 @@
     "framer-motion": "latest",
     "input-otp": "^1.4.2",
     "lucide-react": "latest",
-    "next-themes": "^0.4.6",
+    "playwright": "^1.58.1",
     "react": "latest",
     "react-day-picker": "^9.13.0",
     "react-dom": "latest",
     "react-hook-form": "^7.71.1",
     "react-resizable-panels": "^4.5.6",
     "recharts": "latest",
-    "sonner": "^2.0.7",
     "tailwind-merge": "latest",
     "vaul": "^1.1.2"
   },
   "devDependencies": {
     "@eslint/js": "latest",
     "@tailwindcss/vite": "^4.1.18",
-    "@types/node": "^25.1.0",
-    "@types/react": "^19.2.10",
-    "@types/react-dom": "^19.2.3",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
     "@vitejs/plugin-react": "latest",
     "autoprefixer": "latest",
     "eslint": "latest",
@@ -72,7 +70,7 @@
     "globals": "latest",
     "postcss": "latest",
     "tailwindcss": "latest",
-    "typescript": "^5.7.3",
+    "typescript": "^5.9.3",
     "vite": "latest"
   }
 }
