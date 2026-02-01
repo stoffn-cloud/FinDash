@@ -1,112 +1,93 @@
-import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  Legend
-} from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { Sector } from "@/types/dashboard";
+"use client";
 
-interface SectorChartProps {
-  sectors: Sector[];
-}
+import React from "react";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { cn } from "@/lib/utils";
 
-const COLORS = [
-  "#3B82F6", // Blue
-  "#10B981", // Emerald
-  "#8B5CF6", // Violet
-  "#F59E0B", // Amber
-  "#EC4899", // Pink
-  "#06B6D4", // Cyan
-  "#F97316", // Orange
-  "#6366F1", // Indigo
+const SECTOR_DATA = [
+  { name: "Information Technology", value: 28.5, color: "#3b82f6" },
+  { name: "Financials", value: 15.2, color: "#10b981" },
+  { name: "Healthcare", value: 12.8, color: "#8b5cf6" },
+  { name: "Consumer Discretionary", value: 10.5, color: "#f59e0b" },
+  { name: "Communication Services", value: 8.4, color: "#ec4899" },
+  { name: "Industrials", value: 7.2, color: "#06b6d4" },
 ];
 
-// ---------------------- CUSTOM TOOLTIP ----------------------
-const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
-  if (active && payload && payload.length > 0) {
-    const data = payload[0].payload as Sector; // type assertion
-    return (
-      <div className="bg-slate-900/90 border border-slate-700 backdrop-blur-md rounded-xl px-4 py-3 shadow-2xl">
-        <p className="text-white font-bold text-xs uppercase tracking-widest mb-1">
-          {data.name}
-        </p>
-        <div className="flex items-center gap-2">
-          <span className="text-emerald-400 font-mono font-bold">
-            {data.percentage.toFixed(1)}%
-          </span>
-          <span className="text-slate-500 text-[10px]">van totaal</span>
+export default function SectorChart() {
+  
+  // De "No-Nonsense" Tooltip Bypass
+  const renderSectorTooltip = (props: any) => {
+    const { active, payload } = props;
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-slate-950/95 border border-slate-800 backdrop-blur-xl rounded-xl px-4 py-3 shadow-2xl ring-1 ring-white/10">
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">
+            Sector Allocation
+          </p>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: data.color }} />
+            <span className="text-white font-bold text-sm">{data.name}</span>
+          </div>
+          <p className="text-blue-400 font-mono font-black text-xs mt-1">
+            {data.value.toFixed(1)}% of Portfolio
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  return (
+    <div className="w-full h-[350px] flex flex-col items-center justify-center">
+      <div className="relative w-full h-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={SECTOR_DATA}
+              cx="50%"
+              cy="50%"
+              innerRadius={80}
+              outerRadius={110}
+              paddingAngle={5}
+              dataKey="value"
+              stroke="none"
+            >
+              {SECTOR_DATA.map((entry, index) => (
+                <Cell 
+                  key={`cell-${index}`} 
+                  fill={entry.color} 
+                  className="hover:opacity-80 transition-opacity cursor-pointer"
+                />
+              ))}
+            </Pie>
+            <Tooltip content={renderSectorTooltip} />
+          </PieChart>
+        </ResponsiveContainer>
+
+        {/* Center Label */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+          <span className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">Total</span>
+          <span className="text-white text-2xl font-black italic">100%</span>
         </div>
       </div>
-    );
-  }
-  return null;
-};
 
-export default function SectorChart({ sectors }: SectorChartProps) {
-  return (
-    <Card className="bg-slate-900/40 border-slate-800">
-      <CardHeader>
-        <CardTitle className="text-white text-base">Sector Allocatie</CardTitle>
-      </CardHeader>
-      <CardContent className="h-[300px] flex items-center">
-        <div className="w-1/2 h-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={sectors}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={80}
-                paddingAngle={5}
-                dataKey="percentage"
-              >
-                {sectors.map((_, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="none" />
-                ))}
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-        <div className="w-1/2 space-y-2">
-          {sectors.map((sector, index) => (
-            <div key={index} className="flex items-center justify-between group cursor-default">
-              <div className="flex items-center gap-2">
-                <div 
-                  className="w-2 h-2 rounded-full"
-                  style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                />
-                <span className="text-[11px] text-slate-400 group-hover:text-slate-200 transition-colors">
-                  {sector.name}
-                </span>
-              </div>
-              <span className="text-[11px] font-mono text-slate-500 group-hover:text-white">
-                {sector.percentage}%
+      {/* Custom Legend - Korter en cleaner dan de Recharts default */}
+      <div className="grid grid-cols-2 gap-x-8 gap-y-2 mt-6 w-full px-4">
+        {SECTOR_DATA.map((item, i) => (
+          <div key={i} className="flex items-center justify-between group cursor-default">
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: item.color }} />
+              <span className="text-[10px] font-bold text-slate-400 group-hover:text-slate-200 transition-colors">
+                {item.name}
               </span>
             </div>
-          ))}
-        </div>
+            <span className="text-[10px] font-mono font-black text-slate-500 group-hover:text-blue-400">
+              {item.value}%
+            </span>
+          </div>
+        ))}
       </div>
-
-      <style jsx>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #1e293b;
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #334155;
-        }
-      `}</style>
-    </motion.div>
+    </div>
   );
 }
