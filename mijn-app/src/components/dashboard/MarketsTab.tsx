@@ -1,171 +1,189 @@
-"use client";
-
-import React from "react";
-import { motion } from "framer-motion";
 import { 
-  Landmark, 
-  ArrowRightLeft, 
   TrendingUp,
+  TrendingDown,
+  Info,
+  Calendar,
   Globe,
-  Scale,
-  Activity
+  Zap
 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  AreaChart,
+  Area
+} from "recharts";
 import { cn } from "@/lib/utils";
-import { XAxis, YAxis, Tooltip, ResponsiveContainer, Area, AreaChart, TooltipProps } from "recharts";
 
-// --- CUSTOM TOOLTIP ---
-const CustomTooltip = ({ active, payload }: any) => {
-  // Check of de tooltip actief is en data bevat
-  if (active && payload && payload.length > 0) {
-    const data = payload[0].payload;
+interface YieldData {
+  period: string;
+  yield: number;
+}
+
+const yieldCurveData: YieldData[] = [
+  { period: "1M", yield: 5.38 },
+  { period: "3M", yield: 5.42 },
+  { period: "6M", yield: 5.35 },
+  { period: "1Y", yield: 5.02 },
+  { period: "2Y", yield: 4.65 },
+  { period: "5Y", yield: 4.28 },
+  { period: "10Y", yield: 4.22 },
+  { period: "20Y", yield: 4.45 },
+  { period: "30Y", yield: 4.38 },
+];
+
+const CustomYieldTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
     return (
-      <div className="bg-slate-900/95 border border-white/10 rounded-xl px-4 py-3 shadow-2xl backdrop-blur-md ring-1 ring-white/5">
-        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">
-          {data.maturity} Maturity
-        </p>
-        <p className="text-blue-400 text-lg font-mono font-bold">
-          {payload[0].value.toFixed(3)}%
-        </p>
+      <div className="bg-slate-900 border border-slate-700 p-2 rounded shadow-lg">
+        <p className="text-slate-400 text-[10px] uppercase font-bold tracking-wider mb-1">Treasury Yield</p>
+        <p className="text-white font-mono">{payload[0].value}%</p>
       </div>
     );
   }
   return null;
 };
 
-// --- DATA (Constanten blijven gelijk aan jouw voorbeeld) ---
-const CENTRAL_BANK_RATES = [
-  { bank: "Federal Reserve", flag: "🇺🇸", rate: 4.50, previousRate: 4.75, nextDecision: "Jan 29, 2026" },
-  { bank: "ECB", flag: "🇪🇺", rate: 3.15, previousRate: 3.40, nextDecision: "Mar 6, 2026" },
-  { bank: "Bank of England", flag: "🇬🇧", rate: 4.25, previousRate: 4.50, nextDecision: "Feb 6, 2026" },
-  { bank: "Bank of Japan", flag: "🇯🇵", rate: 0.50, previousRate: 0.25, nextDecision: "Mar 14, 2026" },
-];
-
-const EXCHANGE_RATES = [
-  { pair: "EUR/USD", rate: 1.0842, change: 0.35 },
-  { pair: "GBP/USD", rate: 1.2715, change: -0.18 },
-  { pair: "USD/JPY", rate: 148.52, change: 0.72 },
-  { pair: "USD/CHF", rate: 0.8825, change: -0.25 },
-];
-
-const YIELD_CURVE = [
-  { maturity: "1M", yield: 4.35 }, { maturity: "2Y", yield: 4.12 },
-  { maturity: "5Y", yield: 4.05 }, { maturity: "10Y", yield: 4.18 },
-  { maturity: "30Y", yield: 4.38 },
-];
-
 export default function MarketsTab() {
-  const isDecisionDay = true; // Hardcoded voor demo context 29 jan 2026
-
   return (
-    <div className="space-y-8 pb-10">
-      {/* Header */}
-      <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="p-3 rounded-2xl bg-blue-600/10 border border-blue-600/20">
-            <Globe className="w-6 h-6 text-blue-500" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter">Global Macro Monitor</h2>
-            <p className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Real-time Monetary & FX Node</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-[10px] font-black text-emerald-500 uppercase">Live Markets</span>
-        </div>
-      </motion.div>
-
-      {/* 1. Central Bank Rates Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {CENTRAL_BANK_RATES.map((item) => (
-          <motion.div key={item.bank} whileHover={{ scale: 1.02 }} className="bg-black/20 border border-white/5 rounded-3xl p-6 backdrop-blur-xl relative overflow-hidden group">
-            <div className="flex justify-between items-start mb-6">
-              <span className="text-3xl grayscale group-hover:grayscale-0 transition-all">{item.flag}</span>
-              <div className="text-right">
-                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none">Status</p>
-                <p className="text-[10px] font-bold text-emerald-400 mt-1 uppercase">Dovish Shift</p>
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        {[
+          { label: "Fed Funds Rate", value: "5.50%", change: "Unchanged", status: "Neutral", icon: Zap },
+          { label: "ECB Rate", value: "4.50%", change: "-25bps", status: "Bullish", icon: Globe },
+          { label: "US CPI (YoY)", value: "3.20%", change: "-0.1%", status: "Bullish", icon: TrendingDown },
+          { label: "Fear & Greed", value: "64", change: "+2", status: "Greed", icon: Activity }
+        ].map((item, i) => (
+          <Card key={i} className="bg-slate-900/40 border-slate-800">
+            <CardContent className="p-4">
+              <div className="flex justify-between items-start mb-2">
+                <item.icon className="w-4 h-4 text-blue-400" />
+                <Badge variant="outline" className="text-[10px] py-0">{item.status}</Badge>
               </div>
-            </div>
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">{item.bank}</p>
-            <p className="text-3xl font-mono font-black text-white italic tracking-tighter">{item.rate.toFixed(2)}%</p>
-            
-            <div className={cn(
-              "mt-6 py-2 px-3 rounded-xl text-[9px] font-black text-center uppercase tracking-widest border transition-all",
-              item.bank === "Federal Reserve" ? "bg-rose-500/20 text-rose-500 border-rose-500/30 animate-pulse" : "bg-white/5 text-slate-400 border-white/5"
-            )}>
-              {item.bank === "Federal Reserve" ? "FOMC Decision Today" : `Next: ${item.nextDecision}`}
-            </div>
-          </motion.div>
+              <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">{item.label}</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-xl font-bold text-white font-mono">{item.value}</span>
+                <span className="text-[10px] text-slate-400">{item.change}</span>
+              </div>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* 2. Yield Curve Visualization */}
-        
-        <div className="lg:col-span-2 bg-black/20 border border-white/5 rounded-3xl p-8 backdrop-blur-xl">
-          <div className="flex items-center justify-between mb-10">
-            <div className="flex items-center gap-3">
-              <Activity className="w-5 h-5 text-blue-500" />
-              <h3 className="text-sm font-black text-white uppercase tracking-widest">US Treasury Yield Curve</h3>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-2 bg-slate-900/40 border-slate-800">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-white text-base flex items-center gap-2">
+                US Treasury Yield Curve
+                <Info className="w-3 h-3 text-slate-500" />
+              </CardTitle>
+              <CardDescription className="text-slate-500 text-xs">Current Market Yields vs 1 Month Ago</CardDescription>
             </div>
-            <div className="flex gap-4">
-               <div className="flex items-center gap-2">
-                 <div className="w-2 h-2 rounded-full bg-blue-500" />
-                 <span className="text-[9px] font-black text-slate-500 uppercase">Current</span>
-               </div>
+            <div className="flex gap-2">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-blue-500" />
+                <span className="text-[10px] text-slate-400">Current</span>
+              </div>
             </div>
-          </div>
-          <div className="h-64 w-full">
+          </CardHeader>
+          <CardContent className="h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={YIELD_CURVE}>
+              <AreaChart data={yieldCurveData}>
                 <defs>
-                  <linearGradient id="yieldColor" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                  <linearGradient id="colorYield" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="maturity" stroke="#475569" fontSize={10} fontStyle="italic" tickLine={false} axisLine={false} tick={{fill: '#64748b', fontWeight: 'bold'}} />
-                <YAxis domain={[3.8, 4.6]} hide />
-                <Tooltip content={<CustomTooltip />} />
-                <Area type="monotone" dataKey="yield" stroke="#3B82F6" strokeWidth={4} fill="url(#yieldColor)" animationDuration={2000} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
+                <XAxis
+                  dataKey="period"
+                  stroke="#475569"
+                  fontSize={10}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  stroke="#475569"
+                  fontSize={10}
+                  axisLine={false}
+                  tickLine={false}
+                  domain={[3.5, 6]}
+                />
+                <Tooltip content={<CustomYieldTooltip />} />
+                <Area
+                  type="monotone"
+                  dataKey="yield"
+                  stroke="#3b82f6"
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#colorYield)"
+                />
               </AreaChart>
             </ResponsiveContainer>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        {/* 3. FX Multi-Node List */}
-        <div className="bg-black/20 border border-white/5 rounded-3xl p-8 backdrop-blur-xl">
-          <div className="flex items-center gap-3 mb-10">
-            <ArrowRightLeft className="w-5 h-5 text-emerald-500" />
-            <h3 className="text-sm font-black text-white uppercase tracking-widest">FX Matrix</h3>
-          </div>
-          <div className="space-y-8">
-            {EXCHANGE_RATES.map((item) => (
-              <div key={item.pair} className="flex justify-between items-center group cursor-crosshair">
-                <div className="flex flex-col">
-                  <span className="text-[11px] font-black text-slate-400 group-hover:text-white transition-colors tracking-tighter uppercase">{item.pair}</span>
-                  <span className="text-[8px] font-mono text-slate-600 uppercase">Spot Rate</span>
+        <Card className="bg-slate-900/40 border-slate-800">
+          <CardHeader>
+            <CardTitle className="text-white text-base">Economic Calendar</CardTitle>
+            <CardDescription className="text-xs">Next 48 Hours</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {[
+                { event: "Initial Jobless Claims", time: "14:30", impact: "High", country: "US" },
+                { event: "Retail Sales MoM", time: "14:30", impact: "High", country: "US" },
+                { event: "Industrial Production", time: "15:15", impact: "Medium", country: "US" },
+                { event: "Michigan Consumer Sentiment", time: "16:00", impact: "Medium", country: "US" }
+              ].map((item, i) => (
+                <div key={i} className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-800/50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="flex flex-col items-center justify-center w-8 h-8 rounded border border-slate-700 bg-slate-900">
+                      <span className="text-[10px] text-slate-500 uppercase">{item.country}</span>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-white">{item.event}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <Calendar className="w-3 h-3 text-slate-500" />
+                        <span className="text-[10px] text-slate-500">{item.time}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <Badge className={cn(
+                    "text-[8px] px-1.5 py-0",
+                    item.impact === "High" ? "bg-rose-500/10 text-rose-500 border-rose-500/20" : "bg-blue-500/10 text-blue-500 border-blue-500/20"
+                  )}>
+                    {item.impact}
+                  </Badge>
                 </div>
-                <div className="text-right">
-                  <p className="text-lg font-mono font-bold text-white tracking-tighter">{item.rate.toFixed(4)}</p>
-                  <p className={cn("text-[10px] font-black font-mono", item.change >= 0 ? "text-emerald-500" : "text-rose-500")}>
-                    {item.change >= 0 ? "+" : ""}{item.change.toFixed(2)}%
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-12 p-4 rounded-2xl bg-white/[0.02] border border-white/5">
-             <div className="flex items-center gap-3">
-               <Scale className="w-4 h-4 text-slate-500" />
-               <span className="text-[9px] font-mono text-slate-500 uppercase tracking-widest leading-tight">
-                 PPP Valuation: <span className="text-emerald-500">JPY Undervalued (-35%)</span>
-               </span>
-             </div>
-          </div>
-        </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
 }
+
+const Activity = ({ className }: { className?: string }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+  </svg>
+);

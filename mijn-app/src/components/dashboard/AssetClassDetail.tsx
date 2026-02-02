@@ -3,9 +3,9 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   X, 
-  Activity, 
   Target,
-  PieChart as PieChartIcon 
+  PieChart as PieChartIcon,
+  Activity
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,15 +17,12 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, TooltipProps } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { cn } from "@/lib/utils";
-
-// Inline formatters voor consistentie
-const formatCurrency = (val: number) => `$${val.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-const formatPercentage = (val: number) => `${val >= 0 ? '+' : ''}${val.toFixed(1)}%`;
+import type { AssetClass, Holding } from "@/types/dashboard";
 
 interface AssetClassDetailProps {
-  assetClass: any | null; // De 'any' komt hier uit de engine (processedPortfolio.assetClasses)
+  assetClass: AssetClass | null;
   onClose: () => void;
 }
 
@@ -34,10 +31,7 @@ const HOLDING_COLORS = [
   "#06B6D4", "#F97316", "#6366F1", "#84CC16", "#14B8A6"
 ];
 
-// ---------------------- CUSTOM TOOLTIP ----------------------
-const CustomTooltip = (props: any) => {
-  const { active, payload, label } = props;
-
+const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-black/90 border border-white/10 backdrop-blur-xl rounded-xl px-4 py-3 shadow-2xl ring-1 ring-white/5">

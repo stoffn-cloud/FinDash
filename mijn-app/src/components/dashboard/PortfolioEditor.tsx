@@ -1,193 +1,194 @@
-"use client";
-
 import React, { useState, useEffect } from "react";
-import { Trash2, Plus, Database } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import {
+  Plus,
+  Trash2,
+  Save,
+  RefreshCcw,
+  PlusCircle,
+  Layout
+} from "lucide-react";
+import { usePortfolio } from "@/api/portfolioStore";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 
-export interface Asset {
-  id: string;
-  ticker: string;
-  name: string;
-  amount: number;
-  price: number;
-  assetClass: string;
-}
+export default function PortfolioEditor() {
+  const { portfolio, updateHoldings, fetchLivePrices } = usePortfolio();
+  const [selectedAssetClassId, setSelectedAssetClassId] = useState<string>(portfolio.assetClasses?.[0]?.id || "");
+  const [holdings, setHoldings] = useState(portfolio.assetClasses?.[0]?.holdings || []);
 
-export const DEFAULT_PORTFOLIO: Asset[] = [
-  { id: "def-1", ticker: "AAPL", name: "Apple Inc.", amount: 150, price: 0, assetClass: "Equity" },
-  { id: "def-2", ticker: "MSFT", name: "Microsoft Corp", amount: 80, price: 0, assetClass: "Equity" },
-  { id: "def-3", ticker: "NVDA", name: "NVIDIA Corp", amount: 25, price: 0, assetClass: "Equity" },
-  { id: "def-4", ticker: "ASML", name: "ASML Holding", amount: 15, price: 0, assetClass: "Equity" },
-  { id: "def-5", ticker: "TSLA", name: "Tesla, Inc.", amount: 60, price: 0, assetClass: "Equity" },
-  { id: "def-6", ticker: "GOOGL", name: "Alphabet Inc.", amount: 100, price: 0, assetClass: "Equity" },
-  { id: "def-7", ticker: "META", name: "Meta Platforms", amount: 45, price: 0, assetClass: "Equity" },
-  { id: "def-8", ticker: "LVMUY", name: "LVMH Moet Hennessy", amount: 10, price: 0, assetClass: "Equity" },
-  { id: "def-9", ticker: "BRK-B", name: "Berkshire Hathaway", amount: 30, price: 0, assetClass: "Equity" },
-  { id: "def-10", ticker: "JPM", name: "JPMorgan Chase & Co", amount: 75, price: 0, assetClass: "Equity" },
-  { id: "def-11", ticker: "NSRGY", name: "Nestlé S.A.", amount: 120, price: 0, assetClass: "Equity" },
-  { id: "def-12", ticker: "BTC-USD", name: "Bitcoin", amount: 1.2, price: 0, assetClass: "Crypto" },
-  { id: "def-13", ticker: "GLD", name: "SPDR Gold Shares", amount: 50, price: 0, assetClass: "Commodities" },
-  { id: "def-14", ticker: "TLT", name: "iShares 20+ Yr Treasury Bond", amount: 200, price: 0, assetClass: "FixedIncome" },
-  { id: "def-15", ticker: "IEF", name: "iShares 7-10 Yr Treasury Bond", amount: 150, price: 0, assetClass: "FixedIncome" },
-  { id: "def-16", ticker: "SHY", name: "iShares 1-3 Yr Treasury Bond", amount: 300, price: 0, assetClass: "FixedIncome" },
-  { id: "def-17", ticker: "VUSA.AS", name: "Vanguard S&P 500 UCITS", amount: 400, price: 0, assetClass: "Equity" },
-  { id: "def-18", ticker: "IWDA.AS", name: "iShares Core MSCI World", amount: 600, price: 0, assetClass: "Equity" },
-  { id: "def-19", ticker: "QQQ", name: "Invesco QQQ Trust", amount: 50, price: 0, assetClass: "Equity" },
-  { id: "def-20", ticker: "VNQ", name: "Vanguard Real Estate ETF", amount: 100, price: 0, assetClass: "RealEstate" }
-];
-
-interface PortfolioEditorProps {
-  initialAssets: Asset[];
-  onSave: (assets: Asset[]) => void;
-}
-
-export default function PortfolioEditor({ initialAssets = [], onSave }: PortfolioEditorProps) {
-  const [assets, setAssets] = useState<Asset[]>([]);
-  const [isDefault, setIsDefault] = useState(true);
-
-  // Synchroniseer interne state met props (alleen bij mount of als initialAssets echt veranderen)
   useEffect(() => {
-    if (initialAssets && initialAssets.length > 0) {
-      setAssets(initialAssets);
-      setIsDefault(false);
-    } else {
-      setAssets(DEFAULT_PORTFOLIO);
-      setIsDefault(true);
+    const ac = portfolio.assetClasses?.find(a => a.id === selectedAssetClassId);
+    if (ac) {
+      setHoldings(ac.holdings || []);
     }
-  }, [initialAssets]);
+  }, [portfolio, selectedAssetClassId]);
 
-  const handleUpdate = (id: string, field: keyof Asset, value: string | number) => {
-    let currentAssets = [...assets];
-
-    if (isDefault) {
-      // Zoek de rij die aangepast wordt, geef hem een nieuw ID en wis de rest van de defaults
-      const targetRow = currentAssets.find(a => a.id === id);
-      if (!targetRow) return;
-      
-      const newAsset = { 
-        ...targetRow, 
-        [field]: value, 
-        id: "user-" + Math.random().toString(36).substring(2, 9) 
-      };
-      
-      setAssets([newAsset]);
-      setIsDefault(false);
-    } else {
-      // Normale update voor user assets
-      setAssets(prev => prev.map(a => (a.id === id ? { ...a, [field]: value } : a)));
-    }
+  const handleAssetClassChange = (id: string) => {
+    setSelectedAssetClassId(id);
+    const ac = portfolio.assetClasses?.find(a => a.id === id);
+    setHoldings(ac?.holdings || []);
   };
 
-  const addRow = () => {
-    const newRow: Asset = { 
-      id: "user-" + Math.random().toString(36).substring(2, 9), 
-      ticker: "", 
-      name: "", 
-      amount: 0, 
-      price: 0, 
-      assetClass: "Equity" 
-    };
-    
-    if (isDefault) {
-      setAssets([newRow]);
-      setIsDefault(false);
-    } else {
-      setAssets([...assets, newRow]);
-    }
+  const handleHoldingChange = (index: number, field: string, value: string | number) => {
+    const newHoldings = [...holdings];
+    newHoldings[index] = { ...newHoldings[index], [field]: value };
+    setHoldings(newHoldings);
   };
 
-  const deleteRow = (id: string) => {
-    const filtered = assets.filter(a => a.id !== id);
-    if (filtered.length === 0) {
-      setAssets(DEFAULT_PORTFOLIO);
-      setIsDefault(true);
-    } else {
-      setAssets(filtered);
-    }
+  const addHolding = () => {
+    setHoldings([...holdings, { name: "New Asset", ticker: "", weight: 0, value: 0, return_ytd: 0 }]);
+  };
+
+  const removeHolding = (index: number) => {
+    setHoldings(holdings.filter((_, i) => i !== index));
+  };
+
+  const saveChanges = () => {
+    updateHoldings(selectedAssetClassId, holdings);
   };
 
   return (
-    <div className="space-y-4 bg-slate-900/20 p-6 rounded-3xl border border-white/5 shadow-inner">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-xl font-black italic uppercase text-white flex items-center gap-2">
-            <Database className="text-blue-500 w-5 h-5" /> Asset Ledger
-          </h2>
-          <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">
-            {isDefault ? "Viewing Default Simulation" : "Custom Portfolio Active"}
-          </p>
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="p-2 bg-blue-600 rounded-lg">
+            <Layout className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-white tracking-tight">Portfolio Editor</h2>
+            <p className="text-slate-500 text-[10px] uppercase tracking-widest mt-0.5">Beheer uw Quantum Alpha holdings</p>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={addRow} variant="outline" className="h-9 text-[10px] font-black uppercase border-white/10 hover:bg-white/5 rounded-xl transition-all">
-            <Plus className="w-3 h-3 mr-1" /> Add Position
+        <div className="flex items-center gap-2">
+           <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchLivePrices()}
+            className="bg-slate-900 border-slate-800 text-slate-400 hover:text-white h-9 px-4"
+          >
+            <RefreshCcw className="w-3.5 h-3.5 mr-2" /> Sync Prijzen
           </Button>
-          <Button onClick={() => onSave(assets)} className="h-9 text-[10px] font-black uppercase bg-blue-600 hover:bg-blue-500 rounded-xl px-6 shadow-lg shadow-blue-900/20">
-            Commit Changes
+          <Button
+            size="sm"
+            onClick={saveChanges}
+            className="bg-blue-600 hover:bg-blue-500 text-white h-9 px-4"
+          >
+            <Save className="w-3.5 h-3.5 mr-2" /> Wijzigingen Opslaan
           </Button>
         </div>
       </div>
 
-      <div className="max-h-[500px] overflow-y-auto pr-2 space-y-2 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
-        {assets.map((asset, index) => {
-          // Forceer een UNIEKE string key die niet verandert tijdens het typen
-          const safeKey = asset.id || `row-${index}`;
-
-          return (
-            <div key={safeKey} className="grid grid-cols-12 gap-3 bg-white/[0.02] border border-white/5 p-2 rounded-2xl items-center hover:bg-white/[0.04] transition-colors">
-              <div className="col-span-2">
-                <Input 
-                  value={asset.ticker} 
-                  placeholder="TICKER"
-                  onChange={(e) => handleUpdate(asset.id, "ticker", e.target.value.toUpperCase())}
-                  className="bg-slate-950/50 border-white/5 text-[10px] font-mono font-bold h-9 focus:border-blue-500/50"
-                />
-              </div>
-              <div className="col-span-3">
-                <Input 
-                  value={asset.name} 
-                  placeholder="Asset Name"
-                  onChange={(e) => handleUpdate(asset.id, "name", e.target.value)}
-                  className="bg-slate-950/50 border-white/5 text-[10px] h-9"
-                />
-              </div>
-              <div className="col-span-2">
-                <Input 
-                  type="text" // Veranderd naar text voor betere controle over lege waarden
-                  inputMode="decimal"
-                  value={asset.amount} 
-                  onChange={(e) => {
-                    const val = e.target.value === "" ? 0 : parseFloat(e.target.value);
-                    handleUpdate(asset.id, "amount", isNaN(val) ? 0 : val);
-                  }}
-                  className="bg-slate-950/50 border-white/5 text-[10px] text-center h-9 font-mono"
-                />
-              </div>
-              <div className="col-span-3 text-xs">
-                 <select 
-                   value={asset.assetClass} 
-                   onChange={(e) => handleUpdate(asset.id, "assetClass", e.target.value)}
-                   className="w-full bg-slate-950/50 border border-white/5 rounded-lg h-9 text-[10px] px-2 text-slate-400 outline-none focus:border-blue-500/50"
-                 >
-                   <option value="Equity">Equity</option>
-                   <option value="FixedIncome">Fixed Income</option>
-                   <option value="Crypto">Crypto</option>
-                   <option value="Commodities">Commodities</option>
-                   <option value="RealEstate">Real Estate</option>
-                 </select>
-              </div>
-              <div className="col-span-2 flex justify-end gap-2">
-                <button 
-                  onClick={() => deleteRow(asset.id)} 
-                  className="p-2 text-slate-600 hover:text-rose-500 transition-colors"
-                  title="Remove Asset"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
+      <Card className="bg-slate-900/40 border-slate-800 backdrop-blur-xl rounded-3xl overflow-hidden">
+        <CardHeader className="border-b border-slate-800/50 bg-slate-950/20 p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <CardTitle className="text-white text-base">Categorie Selectie</CardTitle>
+              <CardDescription className="text-slate-500 text-[10px] font-mono uppercase tracking-tight">
+                Bewerk holdings per asset class protocol
+              </CardDescription>
             </div>
-          );
-        })}
+            <Select value={selectedAssetClassId} onValueChange={handleAssetClassChange}>
+              <SelectTrigger className="w-full sm:w-64 bg-slate-950 border-slate-800 text-white rounded-xl">
+                <SelectValue placeholder="Kies categorie..." />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-950 border-slate-800 text-white rounded-xl">
+                {portfolio.assetClasses?.map(ac => (
+                  <SelectItem key={ac.id} value={ac.id!}>{ac.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-slate-950/40">
+                <TableRow className="border-slate-800 hover:bg-transparent">
+                  <TableHead className="text-[10px] font-bold text-slate-500 uppercase py-4">Asset Naam</TableHead>
+                  <TableHead className="text-[10px] font-bold text-slate-500 uppercase py-4">Ticker</TableHead>
+                  <TableHead className="text-[10px] font-bold text-slate-500 uppercase text-right py-4">Aantal Units</TableHead>
+                  <TableHead className="w-16"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {holdings.map((holding, index) => (
+                  <TableRow key={index} className="border-slate-800/50 hover:bg-slate-800/20 transition-colors group">
+                    <TableCell className="py-4">
+                      <Input
+                        value={holding.name}
+                        onChange={(e) => handleHoldingChange(index, "name", e.target.value)}
+                        className="bg-transparent border-none text-slate-200 focus:ring-0 p-0 h-auto font-medium focus-visible:ring-0 focus-visible:ring-offset-0"
+                      />
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <Input
+                        value={holding.ticker}
+                        onChange={(e) => handleHoldingChange(index, "ticker", e.target.value.toUpperCase())}
+                        className="bg-transparent border-none text-blue-400 font-mono focus:ring-0 p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0"
+                      />
+                    </TableCell>
+                    <TableCell className="text-right py-4">
+                      <Input
+                        type="number"
+                        value={(holding as any).quantity || 100}
+                        onChange={(e) => handleHoldingChange(index, "quantity", Number(e.target.value))}
+                        className="bg-transparent border-none text-right text-slate-200 focus:ring-0 p-0 h-auto font-mono focus-visible:ring-0 focus-visible:ring-offset-0"
+                      />
+                    </TableCell>
+                    <TableCell className="py-4 text-center">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeHolding(index)}
+                        className="h-8 w-8 text-slate-600 hover:text-rose-400 hover:bg-rose-500/10 transition-all opacity-0 group-hover:opacity-100"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="p-6 border-t border-slate-800/50 flex justify-center bg-slate-950/10">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={addHolding}
+              className="text-slate-500 hover:text-blue-400 transition-all hover:bg-blue-500/5 px-6 rounded-xl border border-dashed border-slate-800 hover:border-blue-500/30"
+            >
+              <PlusCircle className="w-3.5 h-3.5 mr-2" /> Nieuwe Asset Toevoegen
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="p-6 bg-emerald-500/5 border border-emerald-500/10 rounded-3xl">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <p className="text-[10px] text-emerald-500 font-mono uppercase tracking-[0.2em]">Live Synchronization Protocol</p>
+        </div>
+        <p className="text-xs text-slate-500 leading-relaxed">
+          Wijzigingen worden direct doorgevoerd in de berekeningen van het dashboard zodra u op 'Opslaan' klikt.
+          Gebruik 'Sync Prijzen' om de laatste marktdata op te halen voor alle tickers in uw portfolio via de Quantum Alpha API.
+        </p>
       </div>
     </div>
   );
