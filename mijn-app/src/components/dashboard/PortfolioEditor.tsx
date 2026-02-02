@@ -1,11 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Trash2, Plus, Database } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-// 1. Export de interface voor gebruik in Dashboard.tsx
 export interface Asset {
   id: string;
   ticker: string;
@@ -15,7 +14,6 @@ export interface Asset {
   assetClass: string;
 }
 
-// 2. Export de lijst en zet prijzen op 0 (zodat de Live Engine ze ophaalt)
 export const DEFAULT_PORTFOLIO: Asset[] = [
   { id: "def-1", ticker: "AAPL", name: "Apple Inc.", amount: 150, price: 0, assetClass: "Equity" },
   { id: "def-2", ticker: "MSFT", name: "Microsoft Corp", amount: 80, price: 0, assetClass: "Equity" },
@@ -45,37 +43,52 @@ interface PortfolioEditorProps {
 }
 
 export default function PortfolioEditor({ initialAssets = [], onSave }: PortfolioEditorProps) {
-  // We gebruiken initialAssets als die er zijn, anders de defaults
-  const [assets, setAssets] = useState<Asset[]>(initialAssets.length > 0 ? initialAssets : DEFAULT_PORTFOLIO);
-  const [isDefault, setIsDefault] = useState(initialAssets.length === 0);
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [isDefault, setIsDefault] = useState(true);
 
-  const handleUpdate = (id: string, field: keyof Asset, value: any) => {
+  // Synchroniseer interne state met props (alleen bij mount of als initialAssets echt veranderen)
+  useEffect(() => {
+    if (initialAssets && initialAssets.length > 0) {
+      setAssets(initialAssets);
+      setIsDefault(false);
+    } else {
+      setAssets(DEFAULT_PORTFOLIO);
+      setIsDefault(true);
+    }
+  }, [initialAssets]);
+
+  const handleUpdate = (id: string, field: keyof Asset, value: string | number) => {
+    let currentAssets = [...assets];
+
     if (isDefault) {
-      // Switch van 'Simulatie' naar 'User Mode' bij de eerste wijziging
-      const targetRow = assets.find(a => a.id === id);
+      // Zoek de rij die aangepast wordt, geef hem een nieuw ID en wis de rest van de defaults
+      const targetRow = currentAssets.find(a => a.id === id);
       if (!targetRow) return;
       
       const newAsset = { 
         ...targetRow, 
         [field]: value, 
-        id: "user-" + Math.random().toString(36).substring(2, 7) 
+        id: "user-" + Math.random().toString(36).substring(2, 9) 
       };
+      
       setAssets([newAsset]);
       setIsDefault(false);
     } else {
-      setAssets(prev => prev.map(a => a.id === id ? { ...a, [field]: value } : a));
+      // Normale update voor user assets
+      setAssets(prev => prev.map(a => (a.id === id ? { ...a, [field]: value } : a)));
     }
   };
 
   const addRow = () => {
     const newRow: Asset = { 
-      id: "user-" + Math.random().toString(36).substring(2, 7), 
+      id: "user-" + Math.random().toString(36).substring(2, 9), 
       ticker: "", 
       name: "", 
       amount: 0, 
       price: 0, 
       assetClass: "Equity" 
     };
+    
     if (isDefault) {
       setAssets([newRow]);
       setIsDefault(false);
@@ -95,7 +108,7 @@ export default function PortfolioEditor({ initialAssets = [], onSave }: Portfoli
   };
 
   return (
-    <div className="space-y-4 bg-slate-900/20 p-6 rounded-3xl border border-white/5">
+    <div className="space-y-4 bg-slate-900/20 p-6 rounded-3xl border border-white/5 shadow-inner">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h2 className="text-xl font-black italic uppercase text-white flex items-center gap-2">
@@ -106,62 +119,75 @@ export default function PortfolioEditor({ initialAssets = [], onSave }: Portfoli
           </p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={addRow} variant="outline" className="h-9 text-[10px] font-black uppercase border-white/10 hover:bg-white/5 rounded-xl">
+          <Button onClick={addRow} variant="outline" className="h-9 text-[10px] font-black uppercase border-white/10 hover:bg-white/5 rounded-xl transition-all">
             <Plus className="w-3 h-3 mr-1" /> Add Position
           </Button>
-          <Button onClick={() => onSave(assets)} className="h-9 text-[10px] font-black uppercase bg-blue-600 hover:bg-blue-500 rounded-xl px-6">
+          <Button onClick={() => onSave(assets)} className="h-9 text-[10px] font-black uppercase bg-blue-600 hover:bg-blue-500 rounded-xl px-6 shadow-lg shadow-blue-900/20">
             Commit Changes
           </Button>
         </div>
       </div>
 
-      <div className="max-h-[500px] overflow-y-auto pr-2 space-y-2 scrollbar-thin scrollbar-thumb-slate-800">
-        {assets.map((asset) => (
-          <div key={asset.id} className="grid grid-cols-12 gap-3 bg-white/[0.02] border border-white/5 p-2 rounded-2xl items-center">
-            <div className="col-span-2">
-              <Input 
-                value={asset.ticker} 
-                placeholder="TICKER"
-                onChange={(e) => handleUpdate(asset.id, "ticker", e.target.value.toUpperCase())}
-                className="bg-slate-950/50 border-white/5 text-[10px] font-mono font-bold h-9"
-              />
+      <div className="max-h-[500px] overflow-y-auto pr-2 space-y-2 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
+        {assets.map((asset, index) => {
+          // Forceer een UNIEKE string key die niet verandert tijdens het typen
+          const safeKey = asset.id || `row-${index}`;
+
+          return (
+            <div key={safeKey} className="grid grid-cols-12 gap-3 bg-white/[0.02] border border-white/5 p-2 rounded-2xl items-center hover:bg-white/[0.04] transition-colors">
+              <div className="col-span-2">
+                <Input 
+                  value={asset.ticker} 
+                  placeholder="TICKER"
+                  onChange={(e) => handleUpdate(asset.id, "ticker", e.target.value.toUpperCase())}
+                  className="bg-slate-950/50 border-white/5 text-[10px] font-mono font-bold h-9 focus:border-blue-500/50"
+                />
+              </div>
+              <div className="col-span-3">
+                <Input 
+                  value={asset.name} 
+                  placeholder="Asset Name"
+                  onChange={(e) => handleUpdate(asset.id, "name", e.target.value)}
+                  className="bg-slate-950/50 border-white/5 text-[10px] h-9"
+                />
+              </div>
+              <div className="col-span-2">
+                <Input 
+                  type="text" // Veranderd naar text voor betere controle over lege waarden
+                  inputMode="decimal"
+                  value={asset.amount} 
+                  onChange={(e) => {
+                    const val = e.target.value === "" ? 0 : parseFloat(e.target.value);
+                    handleUpdate(asset.id, "amount", isNaN(val) ? 0 : val);
+                  }}
+                  className="bg-slate-950/50 border-white/5 text-[10px] text-center h-9 font-mono"
+                />
+              </div>
+              <div className="col-span-3 text-xs">
+                 <select 
+                   value={asset.assetClass} 
+                   onChange={(e) => handleUpdate(asset.id, "assetClass", e.target.value)}
+                   className="w-full bg-slate-950/50 border border-white/5 rounded-lg h-9 text-[10px] px-2 text-slate-400 outline-none focus:border-blue-500/50"
+                 >
+                   <option value="Equity">Equity</option>
+                   <option value="FixedIncome">Fixed Income</option>
+                   <option value="Crypto">Crypto</option>
+                   <option value="Commodities">Commodities</option>
+                   <option value="RealEstate">Real Estate</option>
+                 </select>
+              </div>
+              <div className="col-span-2 flex justify-end gap-2">
+                <button 
+                  onClick={() => deleteRow(asset.id)} 
+                  className="p-2 text-slate-600 hover:text-rose-500 transition-colors"
+                  title="Remove Asset"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-            <div className="col-span-3">
-              <Input 
-                value={asset.name} 
-                placeholder="Asset Name"
-                onChange={(e) => handleUpdate(asset.id, "name", e.target.value)}
-                className="bg-slate-950/50 border-white/5 text-[10px] h-9"
-              />
-            </div>
-            <div className="col-span-2">
-              <Input 
-                type="number" 
-                value={asset.amount} 
-                onChange={(e) => handleUpdate(asset.id, "amount", parseFloat(e.target.value) || 0)}
-                className="bg-slate-950/50 border-white/5 text-[10px] text-center h-9 font-mono"
-              />
-            </div>
-            <div className="col-span-3 text-xs">
-               <select 
-                 value={asset.assetClass} 
-                 onChange={(e) => handleUpdate(asset.id, "assetClass", e.target.value)}
-                 className="w-full bg-slate-950/50 border border-white/5 rounded-lg h-9 text-[10px] px-2 text-slate-400"
-               >
-                 <option value="Equity">Equity</option>
-                 <option value="FixedIncome">Fixed Income</option>
-                 <option value="Crypto">Crypto</option>
-                 <option value="Commodities">Commodities</option>
-                 <option value="RealEstate">Real Estate</option>
-               </select>
-            </div>
-            <div className="col-span-2 flex justify-end gap-2">
-              <button onClick={() => deleteRow(asset.id)} className="p-2 text-slate-600 hover:text-rose-500 transition-colors">
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
