@@ -2,72 +2,72 @@ import express from 'express';
 import cors from 'cors';
 import yahooFinance from 'yahoo-finance2';
 
-const app = express();
+const app = express(); // <--- Deze MOET eerst komen!
+const port = 5000;
 
-// CORS voor je Vite app (poort 5173)
-app.use(cors({
-  origin: 'http://localhost:5173',
-  methods: ['GET'],
-  credentials: true
-}));
+// 1. CORS Configuratie
+const corsOptions = {
+  origin: 'http://localhost:5173', // Jouw Vite frontend
+  methods: ['GET', 'POST'],
+  credentials: true,
+};
 
-// 1. DYNAMISCHE PRIJZEN
+app.use(cors(corsOptions));
+app.use(express.json());
+
+// 2. Route voor prijzen (gebruikt door Dashboard overview)
 app.get('/api/prices', async (req, res) => {
   try {
-    const querySymbols = req.query.symbols;
-    const symbols = querySymbols ? querySymbols.split(',') : ['AAPL', 'MSFT', 'BTC-USD'];
+    const { symbols } = req.query;
+    if (!symbols) return res.json({});
 
-    const results = await Promise.all(
-      symbols.map(symbol => 
-        yahooFinance.quote(symbol.trim().toUpperCase())
-          .catch(e => {
-            console.log(`Fout bij ophalen ${symbol}:`, e.message);
-            return null;
-          })
+    const symbolArray = symbols.split(',').filter(s => s.trim() !== "");
+    if (symbolArray.length === 0) return res.json({});
+
+    const results = {};
+    
+    // We halen de quotes op
+    const quotes = await Promise.all(
+      symbolArray.map(symbol => 
+        yahooFinance.quote(symbol).catch(err => ({ symbol, regularMarketPrice: 0 }))
       )
     );
 
-    const prices = {};
-    results.forEach(quote => {
-      if (quote && quote.symbol) {
-        prices[quote.symbol] = quote.regularMarketPrice;
+    quotes.forEach(quote => {
+      if (quote) {
+        results[quote.symbol] = quote.regularMarketPrice;
       }
     });
 
-    res.json(prices);
+    res.json(results);
   } catch (error) {
-    console.error("General prices error:", error);
-    res.status(500).json({ error: "Server kon de prijzen niet verwerken." });
+    console.error("Price fetch error:", error);
+    res.status(500).json({ error: "Failed to fetch prices" });
   }
 });
 
-// 2. LIVE SEARCH
+// 3. Route voor zoeken (gebruikt door PortfolioEditor)
 app.get('/api/search', async (req, res) => {
   try {
     const query = req.query.q;
     if (!query || query.length < 2) return res.json([]);
 
-    console.log(`Zoeken naar: ${query}`);
-    const searchResults = await yahooFinance.search(query);
-    
-    const suggestions = searchResults.quotes
-      .filter(q => ['EQUITY', 'ETF', 'CRYPTOCURRENCY'].includes(q.quoteType))
-      .map(q => ({
-        ticker: q.symbol,
-        name: q.shortname || q.longname || q.symbol,
-        exchange: q.exchange,
-        type: q.quoteType
-      }))
-      .slice(0, 8);
+    const result = await yahooFinance.search(query);
+    const suggestions = result.quotes
+      .filter(quote => quote.isYahooFinance) // Alleen echte assets
+      .map(quote => ({
+        ticker: quote.symbol,
+        name: quote.longname || quote.shortname,
+        exchange: quote.exchange
+      }));
 
     res.json(suggestions);
   } catch (error) {
     console.error("Search error:", error);
-    res.status(500).json({ error: "Zoekfunctie tijdelijk niet beschikbaar." });
+    res.status(500).json({ error: "Search failed" });
   }
 });
 
-const PORT = 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 QUANT BACKEND ACTIEF OP POORT ${PORT}`);
+app.listen(port, () => {
+  console.log(`🚀 QUANT BACKEND ACTIEF OP POORT ${port}`);
 });

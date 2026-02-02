@@ -14,7 +14,12 @@ import { ChevronRight, TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Helper formatters (mocht je de lib niet hebben, staan ze hieronder als inline functies)
-const formatCurrency = (val: number) => `$${val.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+const formatCurrency = (val: number) => {
+  return (val ?? 0).toLocaleString('en-US', { 
+    style: 'currency', 
+    currency: 'USD' 
+  });
+};
 const formatPercentage = (val: number) => `${val >= 0 ? '+' : ''}${val.toFixed(1)}%`;
 
 interface AssetAllocationTableProps {
