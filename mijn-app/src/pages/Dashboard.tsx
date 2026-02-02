@@ -1,43 +1,31 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  Wallet, 
-  RefreshCw,
   LayoutDashboard,
+  ShieldAlert,
   History,
   Grid3X3,
   Globe,
-  Calendar as CalendarIcon,
+  Calendar,
+  Castle,
   Calculator,
-  Search,
-  Settings
+  RefreshCw,
+  TrendingUp
 } from "lucide-react";
 
-// Utilities
-import { cn } from "@/lib/utils";
-
-// UI Components
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  CommandDialog,
-  CommandInput,
-  CommandList,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
-} from "@/components/ui/command";
 
-// UI Components - Robustness
-import ErrorBoundary from "@/components/ui/ErrorBoundary";
-import { AlertCircle, RotateCcw } from "lucide-react";
+// @ts-ignore
+import { mockPortfolio } from "../api/mockData.js";
 
 // Dashboard Secties
 import DashboardContent from "@/components/dashboard/DashboardContent";
+import RiskTab from "@/components/dashboard/RiskTab";
 import TransactionHistory from "@/components/dashboard/TransactionHistory";
 import CorrelationsTab from "@/components/dashboard/CorrelationsTab";
 import MarketsTab from "@/components/dashboard/MarketsTab";
@@ -46,302 +34,155 @@ import SandboxTab from "@/components/dashboard/SandboxTab";
 import CalculationsTab from "@/components/dashboard/CalculationsTab";
 import AssetClassDetail from "@/components/dashboard/AssetClassDetail";
 
-// Data Import & Validation
-import { mockPortfolio } from "@/api/mockData";
-import { PortfolioSchema } from "@/api/schemas";
-
 export default function Dashboard() {
-  const [selectedAssetClass, setSelectedAssetClass] = useState(null);
-  const [isCommandOpen, setIsCommandOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [selectedAssetClass, setSelectedAssetClass] = useState<any>(null);
 
-  // Keyboard shortcut voor de Search (Cmd+K)
-  useEffect(() => {
-    const down = (e) => {
-      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        setIsCommandOpen((open) => !open);
-      }
-    };
-    document.addEventListener("keydown", down);
-    return () => document.removeEventListener("keydown", down);
-  }, []);
-
-  const { data: portfolio, isLoading, error, refetch, isFetching } = useQuery({
+  // --- CENTRALE DATA FETCH ---
+  const { data: portfolio, isLoading, refetch } = useQuery({
     queryKey: ["portfolio"],
     queryFn: async () => {
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 800));
-
-      // Robustness: Validate mock data with Zod
-      const result = PortfolioSchema.safeParse(mockPortfolio);
-
-      if (!result.success) {
-        console.error("Data Validation Error:", result.error);
-        throw new Error("Ongeldige portfolio data format.");
-      }
-
-      return result.data;
+      // Simuleer een korte vertraging voor de pro-look
+      await new Promise(resolve => setTimeout(resolve, 400));
+      return mockPortfolio as any;
     },
-    retry: 1,
   });
 
+  // Haal assetClasses direct uit de centrale portfolio bron
   const assetClasses = portfolio?.assetClasses || [];
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-[#020617] flex items-center justify-center p-6">
-        <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center backdrop-blur-xl">
-          <div className="w-16 h-16 bg-rose-500/10 rounded-full flex items-center justify-center mb-6 border border-rose-500/20 mx-auto">
-            <AlertCircle className="w-8 h-8 text-rose-500" />
-          </div>
-          <h2 className="text-2xl font-bold text-white mb-2">Fout bij laden</h2>
-          <p className="text-slate-400 mb-8">
-            Er is een probleem opgetreden bij het ophalen van de portfolio gegevens.
-          </p>
-          <Button
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className="bg-blue-600 hover:bg-blue-500 w-full"
-          >
-            <RotateCcw className={cn("w-4 h-4 mr-2", isFetching && "animate-spin")} />
-            Opnieuw Proberen
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#020617] p-6 md:p-10">
-        <div className="max-w-7xl mx-auto space-y-8">
-          <div className="flex justify-between items-center">
-            <Skeleton className="h-10 w-48 bg-slate-800/50 rounded-lg" />
-            <Skeleton className="h-10 w-32 bg-slate-800/50 rounded-lg" />
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-10">
+        <div className="max-w-7xl w-full space-y-8">
+          <Skeleton className="h-12 w-72 bg-slate-900 rounded-full" />
+          <div className="grid grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32 bg-slate-900 rounded-2xl" />)}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {[...Array(4)].map((_, i) => (
-              <Skeleton key={i} className="h-32 bg-slate-800/20 rounded-2xl" />
-            ))}
-          </div>
-          <Skeleton className="h-[450px] w-full bg-slate-800/10 rounded-3xl" />
+          <Skeleton className="h-96 bg-slate-900 rounded-3xl" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-200 selection:bg-blue-500/30">
-      {/* Background Glows */}
+    <div className="min-h-screen bg-[#020617] text-slate-200">
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <motion.div 
-          animate={{ scale: [1, 1.1, 1], opacity: [0.1, 0.2, 0.1] }}
-          transition={{ duration: 10, repeat: Infinity }}
-          className="absolute -top-24 -left-24 w-[500px] h-[500px] bg-blue-600/15 rounded-full blur-[120px]"
-        />
-        <motion.div 
-          animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.2, 0.1] }}
-          transition={{ duration: 15, repeat: Infinity, delay: 2 }}
-          className="absolute top-1/2 -right-24 w-[400px] h-[400px] bg-violet-600/15 rounded-full blur-[120px]"
-        />
+        <div className="absolute -top-24 -left-24 w-96 h-96 bg-blue-600/10 rounded-full blur-[120px]" />
+        <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-indigo-600/5 rounded-full blur-[150px]" />
       </div>
 
-      <div className="relative z-10 p-4 md:p-10">
+      <div className="relative z-10 p-6 md:p-10">
         <div className="max-w-7xl mx-auto space-y-8">
           
-          {/* Header */}
-          <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative rounded-full h-2 w-2 bg-emerald-500"></span>
+          {/* Header Sectie */}
+          <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-800/50 pb-8">
+            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-[10px] font-black text-blue-400 uppercase tracking-widest">
+                  Live Terminal v2.1
                 </span>
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Terminal v2.0 • Live</span>
               </div>
-              <h1 className="text-4xl md:text-5xl font-extrabold text-white tracking-tighter italic">
+              <h1 className="text-4xl md:text-6xl font-black text-white italic tracking-tighter uppercase">
                 {portfolio?.name}
               </h1>
+              <p className="text-slate-500 text-sm font-medium mt-2 flex items-center gap-4">
+                <span>VALUE: <b className="text-white font-mono">${portfolio?.totalValue?.toLocaleString()}</b></span>
+                <span className="w-1 h-1 bg-slate-700 rounded-full" />
+                <span>YTD: <b className="text-emerald-400">+{portfolio?.ytdReturn}%</b></span>
+                <span className="w-1 h-1 bg-slate-700 rounded-full" />
+                <span>CURRENCY: <b className="text-slate-300">{portfolio?.currency}</b></span>
+              </p>
             </motion.div>
             
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsCommandOpen(true)}
-                className="bg-slate-900/40 border-slate-800 text-slate-400"
-              >
-                <Search className="w-4 h-4 mr-2" />
-                <span className="mr-4">Search...</span>
-                <kbd className="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">⌘K</kbd>
-              </Button>
-              <Button
-                variant="default"
-                onClick={() => refetch()}
-                disabled={isFetching}
-                className="bg-blue-600 hover:bg-blue-500"
-              >
-                <RefreshCw className={cn("w-4 h-4 mr-2", isFetching && "animate-spin")} />
-                Sync
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              onClick={() => refetch()}
+              className="bg-slate-900/50 border-slate-800 text-white hover:bg-slate-800 rounded-xl px-8 py-6 h-auto transition-all"
+            >
+              <RefreshCw className="w-4 h-4 mr-3" />
+              Sync Node
+            </Button>
           </header>
 
-          {/* Navigation Tabs */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-            <div className="sticky top-6 z-40">
-              <div className="p-1 bg-slate-950/60 backdrop-blur-xl border border-slate-800/50 rounded-2xl shadow-2xl inline-block">
-                <TabsList className="bg-transparent border-none gap-1">
-                  <NavTrigger value="dashboard" icon={LayoutDashboard} label="Dashboard" />
-                  <NavTrigger value="assets" icon={Grid3X3} label="Asset Classes" />
-                  <NavTrigger value="transactions" icon={History} label="History" />
-                  <NavTrigger value="markets" icon={Globe} label="Markets" />
-                  <NavTrigger value="calendar" icon={CalendarIcon} label="Calendar" />
-                  <NavTrigger value="sandbox" icon={Wallet} label="Sandbox" />
-                  <NavTrigger value="calculations" icon={Calculator} label="Math" />
-                </TabsList>
-              </div>
+          <Tabs defaultValue="dashboard" className="w-full">
+            <div className="sticky top-6 z-50 mb-12">
+              <TabsList className="bg-slate-900/40 backdrop-blur-3xl border border-white/5 p-1.5 rounded-2xl h-auto flex flex-wrap gap-1 shadow-2xl">
+                <NavTrigger value="dashboard" icon={LayoutDashboard} label="Overview" />
+                <NavTrigger value="risk" icon={ShieldAlert} label="Risk" />
+                <NavTrigger value="correlations" icon={Grid3X3} label="Matrix" />
+                <NavTrigger value="markets" icon={Globe} label="Markets" />
+                <NavTrigger value="calendar" icon={Calendar} label="Events" />
+                <NavTrigger value="sandbox" icon={Castle} label="Sandbox" />
+                <NavTrigger value="calculations" icon={Calculator} label="Math" />
+                <NavTrigger value="transactions" icon={History} label="History" />
+              </TabsList>
             </div>
 
-            <ErrorBoundary>
+            <div className="mt-4">
               <AnimatePresence mode="wait">
-                {activeTab === "dashboard" && (
-                  <TabsContent value="dashboard" forceMount>
-                    <motion.div
-                      key="dashboard"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <DashboardContent
-                        portfolio={portfolio}
-                        assetClasses={assetClasses}
-                        onSelectAsset={setSelectedAssetClass}
-                      />
-                    </motion.div>
-                  </TabsContent>
-                )}
-                {activeTab === "assets" && (
-                  <TabsContent value="assets" forceMount>
-                    <motion.div
-                      key="assets"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <CorrelationsTab portfolio={portfolio} assetClasses={assetClasses} />
-                    </motion.div>
-                  </TabsContent>
-                )}
-                {activeTab === "transactions" && (
-                  <TabsContent value="transactions" forceMount>
-                    <motion.div
-                      key="transactions"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <TransactionHistory transactions={portfolio?.transactions || []} />
-                    </motion.div>
-                  </TabsContent>
-                )}
-                {activeTab === "markets" && (
-                  <TabsContent value="markets" forceMount>
-                    <motion.div
-                      key="markets"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <MarketsTab />
-                    </motion.div>
-                  </TabsContent>
-                )}
-                {activeTab === "calendar" && (
-                  <TabsContent value="calendar" forceMount>
-                    <motion.div
-                      key="calendar"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <CalendarTab />
-                    </motion.div>
-                  </TabsContent>
-                )}
-                {activeTab === "sandbox" && (
-                  <TabsContent value="sandbox" forceMount>
-                    <motion.div
-                      key="sandbox"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <SandboxTab />
-                    </motion.div>
-                  </TabsContent>
-                )}
-                {activeTab === "calculations" && (
-                  <TabsContent value="calculations" forceMount>
-                    <motion.div
-                      key="calculations"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <CalculationsTab />
-                    </motion.div>
-                  </TabsContent>
-                )}
+                <TabsContent value="dashboard" className="outline-none">
+                  <DashboardContent 
+                    portfolio={portfolio}
+                    assetClasses={assetClasses}
+                    onSelectAsset={setSelectedAssetClass} 
+                  />
+                </TabsContent>
+
+                {/* Risk Tab met Data Injectie */}
+                <TabsContent value="risk" className="outline-none">
+                  <RiskTab {...({ portfolio } as any)} />
+                </TabsContent>
+
+                {/* Correlations Tab met Data Injectie */}
+                <TabsContent value="correlations" className="outline-none">
+                  <CorrelationsTab {...({ assetClasses, portfolio } as any)} />
+                </TabsContent>
+
+                <TabsContent value="markets" className="outline-none">
+                  <MarketsTab />
+                </TabsContent>
+
+                <TabsContent value="calendar" className="outline-none">
+                  <CalendarTab {...({ assetClasses } as any)} />
+                </TabsContent>
+
+                {/* Sandbox Tab met Data Injectie */}
+                <TabsContent value="sandbox" className="outline-none">
+                  <SandboxTab {...({ portfolio } as any)} />
+                </TabsContent>
+
+                <TabsContent value="calculations" className="outline-none">
+                  <CalculationsTab />
+                </TabsContent>
+
+                {/* Transactions Tab met Data Injectie uit de nieuwe MockData */}
+                <TabsContent value="transactions" className="outline-none">
+                  <TransactionHistory {...({ transactions: portfolio?.transactions } as any)} />
+                </TabsContent>
               </AnimatePresence>
-            </ErrorBoundary>
+            </div>
           </Tabs>
         </div>
       </div>
 
-      {/* Global Command Menu */}
-      <CommandDialog open={isCommandOpen} onOpenChange={setIsCommandOpen}>
-        <CommandInput placeholder="Search assets, tools or pages..." />
-        <CommandList>
-          <CommandEmpty>No results found.</CommandEmpty>
-          <CommandGroup heading="Navigation">
-            <CommandItem onSelect={() => setIsCommandOpen(false)}>Overview</CommandItem>
-            <CommandItem onSelect={() => setIsCommandOpen(false)}>Portfolio Analysis</CommandItem>
-          </CommandGroup>
-          <CommandGroup heading="Quick Actions">
-            <CommandItem onSelect={() => refetch()}>Refresh Data</CommandItem>
-            <CommandItem>Export CSV</CommandItem>
-          </CommandGroup>
-        </CommandList>
-      </CommandDialog>
-
-      {/* Detail Modal */}
-      <AssetClassDetail 
-        assetClass={selectedAssetClass} 
-        isOpen={!!selectedAssetClass} 
-        onClose={() => setSelectedAssetClass(null)} 
-      />
+      {selectedAssetClass && (
+        <AssetClassDetail 
+          assetClass={selectedAssetClass} 
+          onClose={() => setSelectedAssetClass(null)} 
+        />
+      )}
     </div>
   );
 }
 
-// Helper component for cleaner TabsList
-function NavTrigger({ value, icon: Icon, label }) {
+function NavTrigger({ value, icon: Icon, label }: { value: string, icon: any, label: string }) {
   return (
     <TabsTrigger 
       value={value} 
-      className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-widest transition-all"
+      className="data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-blue-600/20 text-slate-400 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center gap-2 hover:text-white"
     >
-      <Icon className="w-4 h-4 mr-2" />
-      <span className="hidden md:inline">{label}</span>
+      <Icon className="w-4 h-4" />
+      {label}
     </TabsTrigger>
   );
 }
