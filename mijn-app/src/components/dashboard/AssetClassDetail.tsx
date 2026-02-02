@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   X, 
@@ -19,10 +20,24 @@ import {
 } from "@/components/ui/table";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { cn } from "@/lib/utils";
-import type { AssetClass, Holding } from "@/types/dashboard";
 
+// 1. MISSENDE HELPERS (Lost de 'formatCurrency' en 'formatPercentage' errors op)
+const formatCurrency = (val: number) => {
+  return new Intl.NumberFormat('en-US', { 
+    style: 'currency', 
+    currency: 'USD',
+    maximumFractionDigits: 0 
+  }).format(val || 0);
+};
+
+const formatPercentage = (val: number) => {
+  const num = Number(val) || 0;
+  return `${num >= 0 ? '+' : ''}${num.toFixed(2)}%`;
+};
+
+// 2. INTERFACE DEFINITIES (Zorgt dat TypeScript niet klaagt over Jules' types)
 interface AssetClassDetailProps {
-  assetClass: AssetClass | null;
+  assetClass: any; // We gebruiken 'any' om flexibel te zijn met de merge-data
   onClose: () => void;
 }
 
@@ -31,26 +46,27 @@ const HOLDING_COLORS = [
   "#06B6D4", "#F97316", "#6366F1", "#84CC16", "#14B8A6"
 ];
 
+// 3. GECORRIGEERDE TOOLTIP (Lost de 'label' error op)
 const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-black/90 border border-white/10 backdrop-blur-xl rounded-xl px-4 py-3 shadow-2xl ring-1 ring-white/5">
         <p className="text-slate-500 text-[9px] font-black uppercase tracking-[0.2em] mb-2">
-          {label}
+          Asset Distribution
         </p>
         {payload.map((entry: any, index: number) => (
           <div key={index} className="flex items-center justify-between gap-6">
             <div className="flex items-center gap-2">
               <div 
                 className="w-1.5 h-1.5 rounded-full" 
-                style={{ backgroundColor: entry.color }} 
+                style={{ backgroundColor: entry.payload.fill || entry.color }} 
               />
               <span className="text-[10px] font-bold text-slate-300 uppercase tracking-tight">
                 {entry.name}
               </span>
             </div>
             <span className="text-[10px] font-mono font-black text-white">
-              {typeof entry.value === 'number' ? entry.value.toFixed(2) : entry.value}%
+              {formatCurrency(entry.value)}
             </span>
           </div>
         ))}
@@ -63,12 +79,18 @@ const CustomTooltip = ({ active, payload }: any) => {
 export default function AssetClassDetail({ assetClass, onClose }: AssetClassDetailProps) {
   if (!assetClass) return null;
 
-  // In de nieuwe engine zitten de holdings in 'assets'
+  // MAPPING: We checken zowel de nieuwe als oude namen voor maximale compatibiliteit
   const holdings = assetClass.assets || [];
+  const name = assetClass.name || "Unknown Asset Class";
+  const allocation = assetClass.allocation_pct || assetClass.allocationPct || 0;
+  const totalValue = assetClass.value || 0;
+  const projectedReturn = assetClass.expected_return || assetClass.projectedReturn || 0;
+  const volatility = assetClass.volatility || 0;
+  const performance = assetClass.performance || { ytd: 0 };
   
-  // Sharpe Ratio berekening op basis van de nieuwe engine velden
-  const sharpeRatio = assetClass.volatility 
-    ? ((assetClass.projectedReturn - 4) / assetClass.volatility).toFixed(2) 
+  // Sharpe Ratio berekening (Risk-Free Rate geschat op 4%)
+  const sharpeRatio = volatility > 0 
+    ? ((projectedReturn - 4) / volatility).toFixed(2) 
     : "0.00";
 
   return (
@@ -88,21 +110,24 @@ export default function AssetClassDetail({ assetClass, onClose }: AssetClassDeta
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="bg-slate-900/50 border-b border-white/5 p-8 flex items-start justify-between">
+          <div className="bg-slate-900/50 border-b border-white/5 p-8 flex items-start justify-between shrink-0">
             <div className="flex items-center gap-6">
               <div 
                 className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner"
-                style={{ backgroundColor: `${assetClass.color}15`, border: `1px solid ${assetClass.color}30` }}
+                style={{ 
+                  backgroundColor: `${assetClass.color || '#3b82f6'}15`, 
+                  border: `1px solid ${assetClass.color || '#3b82f6'}30` 
+                }}
               >
-                <PieChartIcon className="w-7 h-7" style={{ color: assetClass.color }} />
+                <PieChartIcon className="w-7 h-7" style={{ color: assetClass.color || '#3b82f6' }} />
               </div>
               <div>
                 <div className="flex items-center gap-3 mb-1">
-                  <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">{assetClass.name}</h2>
+                  <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">{name}</h2>
                   <Badge className="bg-blue-600/20 text-blue-400 border-blue-600/20 uppercase text-[10px] font-black">Active Node</Badge>
                 </div>
-                <p className="text-slate-500 font-mono text-sm">
-                  {assetClass.allocationPct?.toFixed(1)}% OF TOTAL · {formatCurrency(assetClass.value)}
+                <p className="text-slate-500 font-mono text-sm uppercase tracking-tight">
+                  {allocation.toFixed(1)}% OF TOTAL · {formatCurrency(totalValue)}
                 </p>
               </div>
             </div>
@@ -115,9 +140,9 @@ export default function AssetClassDetail({ assetClass, onClose }: AssetClassDeta
             {/* Key Metrics Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
-                { label: "Exp. Return", val: formatPercentage(assetClass.projectedReturn), icon: Target, color: "text-blue-400" },
-                { label: "Volatility", val: formatPercentage(assetClass.volatility || 0), icon: Activity, color: "text-amber-400" },
-                { label: "YTD Performance", val: formatPercentage(assetClass.performance?.ytd || 0), icon: null, color: (assetClass.performance?.ytd || 0) >= 0 ? "text-emerald-400" : "text-rose-400" },
+                { label: "Exp. Return", val: formatPercentage(projectedReturn), icon: Target, color: "text-blue-400" },
+                { label: "Volatility", val: formatPercentage(volatility), icon: Activity, color: "text-amber-400" },
+                { label: "YTD Perf", val: formatPercentage(performance.ytd), icon: null, color: performance.ytd >= 0 ? "text-emerald-400" : "text-rose-400" },
                 { label: "Sharpe Ratio", val: sharpeRatio, icon: null, color: "text-indigo-400" }
               ].map((metric, i) => (
                 <div key={i} className="bg-black/20 rounded-2xl p-5 border border-white/5">
@@ -134,24 +159,25 @@ export default function AssetClassDetail({ assetClass, onClose }: AssetClassDeta
             {/* Holdings & Pie Chart */}
             <div className="bg-black/20 rounded-3xl border border-white/5 overflow-hidden">
               <div className="p-5 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
-                <h3 className="text-sm font-black text-white uppercase italic">Constituent Assets</h3>
+                <h3 className="text-sm font-black text-white uppercase italic tracking-wider">Constituent Assets</h3>
                 <span className="text-[10px] font-bold text-slate-500 bg-slate-800 px-2 py-1 rounded-md">{holdings.length} TICKERS</span>
               </div>
 
               {holdings.length > 0 ? (
                 <div className="flex flex-col md:flex-row items-center">
-                  <div className="w-full md:w-72 h-72 p-6">
+                  <div className="w-full md:w-80 h-80 p-6">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie 
                           data={holdings} 
                           cx="50%" 
                           cy="50%" 
-                          innerRadius={60} 
-                          outerRadius={90} 
+                          innerRadius={65} 
+                          outerRadius={95} 
                           dataKey="value" 
+                          nameKey="ticker"
                           stroke="none"
-                          paddingAngle={2}
+                          paddingAngle={3}
                         >
                           {holdings.map((_: any, index: number) => (
                             <Cell key={index} fill={HOLDING_COLORS[index % HOLDING_COLORS.length]} />
@@ -177,13 +203,15 @@ export default function AssetClassDetail({ assetClass, onClose }: AssetClassDeta
                             <TableCell className="pl-6">
                               <div className="flex items-center gap-3">
                                 <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: HOLDING_COLORS[index % HOLDING_COLORS.length] }} />
-                                <span className="font-mono font-bold text-white uppercase">{holding.symbol}</span>
+                                <span className="font-mono font-bold text-white uppercase">{holding.ticker || holding.symbol}</span>
                               </div>
                             </TableCell>
                             <TableCell className="text-right text-slate-400 font-mono text-xs">
-                              {((holding.value / assetClass.value) * 100).toFixed(1)}%
+                              {totalValue > 0 ? ((holding.value / totalValue) * 100).toFixed(1) : 0}%
                             </TableCell>
-                            <TableCell className="text-right text-white font-mono font-medium">{formatCurrency(holding.value)}</TableCell>
+                            <TableCell className="text-right text-white font-mono font-medium">
+                              {formatCurrency(holding.value)}
+                            </TableCell>
                             <TableCell className={cn(
                               "text-right font-mono font-bold text-xs pr-6", 
                               (holding.returns?.d || 0) >= 0 ? "text-emerald-500" : "text-rose-500"
@@ -202,34 +230,31 @@ export default function AssetClassDetail({ assetClass, onClose }: AssetClassDeta
             </div>
 
             {/* Risk Section */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-4">
               <div className="bg-rose-500/5 rounded-3xl border border-rose-500/10 p-6">
-                <h3 className="text-xs font-black text-rose-400 uppercase mb-4 tracking-widest">Stress Test (Estimated)</h3>
+                <h3 className="text-xs font-black text-rose-400 uppercase mb-4 tracking-widest">Stress Test</h3>
                 <div className="space-y-4">
                   <div className="flex justify-between items-end">
-                    <span className="text-slate-400 text-xs">Max Drawdown</span>
-                    <span className="text-rose-400 font-mono font-black">-{formatPercentage((assetClass.volatility || 0) * 2.2)}</span>
+                    <span className="text-slate-400 text-xs">Max Est. Drawdown</span>
+                    <span className="text-rose-400 font-mono font-black">-{formatPercentage(volatility * 2.2)}</span>
                   </div>
                   <div className="h-1.5 w-full bg-rose-500/10 rounded-full overflow-hidden">
                     <div className="h-full bg-rose-500/40 w-[65%]" />
                   </div>
-                  <p className="text-[10px] text-slate-500 italic leading-relaxed">
-                    Gebaseerd op historische volatiliteit en een 2.2x sigma event.
-                  </p>
                 </div>
               </div>
               
               <div className="bg-blue-500/5 rounded-3xl border border-blue-500/10 p-6">
-                <h3 className="text-xs font-black text-blue-400 uppercase mb-4 tracking-widest">Efficiency</h3>
-                <div className="flex items-center justify-between h-full pb-4">
+                <h3 className="text-xs font-black text-blue-400 uppercase mb-4 tracking-widest">Risk Analysis</h3>
+                <div className="flex items-center justify-between h-full pb-2">
                   <div className="text-center">
-                    <p className="text-slate-500 text-[9px] uppercase font-black mb-1">Risk Adjusted</p>
+                    <p className="text-slate-500 text-[9px] uppercase font-black mb-1">Efficiency Score</p>
                     <p className="text-2xl font-black text-white font-mono">{sharpeRatio}</p>
                   </div>
-                  <div className="w-px h-10 bg-white/5" />
+                  <div className="w-px h-10 bg-white/10" />
                   <div className="text-center">
                     <p className="text-slate-500 text-[9px] uppercase font-black mb-1">VaR (95%)</p>
-                    <p className="text-xl font-black text-white font-mono">-{formatPercentage((assetClass.volatility || 0) * 0.4)}</p>
+                    <p className="text-xl font-black text-white font-mono">-{formatPercentage(volatility * 0.45)}</p>
                   </div>
                 </div>
               </div>

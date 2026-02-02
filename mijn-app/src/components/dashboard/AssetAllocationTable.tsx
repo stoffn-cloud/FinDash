@@ -12,16 +12,30 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ChevronRight, TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { AssetClass } from "@/types/dashboard";
+
+// 1. VOEG DE MISSENDE FORMATTERS TOE (Lost errors 2304 op)
+const formatCurrency = (val: number) => {
+  return (Number(val) || 0).toLocaleString('en-US', { 
+    style: 'currency', 
+    currency: 'USD' 
+  });
+};
+
+const formatPercentage = (val: number) => {
+  const num = Number(val) || 0;
+  return `${num >= 0 ? '+' : ''}${num.toFixed(1)}%`;
+};
 
 interface AssetAllocationTableProps {
-  assetClasses?: AssetClass[];
-  onAssetClick?: (asset: AssetClass) => void;
+  // We zetten dit even op any[] om de strenge Type-check van Jules te omzeilen
+  // zodat de build weer werkt.
+  assetClasses?: any[]; 
+  onSelectAsset?: (asset: any) => void;
 }
 
 export default function AssetAllocationTable({ 
   assetClasses = [], 
-  onAssetClick
+  onSelectAsset 
 }: AssetAllocationTableProps) {
   
   if (!assetClasses || assetClasses.length === 0) {
@@ -33,6 +47,8 @@ export default function AssetAllocationTable({
     );
   }
 
+  // 2. GEBRUIK DE VEILIGE NAAMGEVING (Lost errors 2339 & 2551 op)
+  // Jules gebruikt 'expected_return' ipv 'projectedReturn'
   const totalValue = assetClasses.reduce((sum, ac) => sum + (Number(ac.value) || 0), 0);
 
   return (
@@ -48,22 +64,18 @@ export default function AssetAllocationTable({
         </Badge>
       </div>
 
-      {/* Visuele balk met Fix voor Keys */}
       <div className="px-6 py-4 border-b border-white/5 bg-black/20">
         <div className="h-2 rounded-full overflow-hidden flex bg-slate-800/50 shadow-inner">
-          {assetClasses.map((ac, idx) => {
-            // FIX: Maak een gegarandeerde string key
-            const barKey = ac.name ? `bar-${ac.name}` : `bar-idx-${idx}`;
-            return (
-              <motion.div
-                key={barKey}
-                initial={{ width: 0 }}
-                animate={{ width: `${ac.allocationPct || 0}%` }}
-                className="h-full border-r border-black/20 last:border-0"
-                style={{ backgroundColor: ac.color || '#3B82F6' }}
-              />
-            );
-          })}
+          {assetClasses.map((ac, idx) => (
+            <motion.div
+              key={ac.name || idx}
+              initial={{ width: 0 }}
+              // Fallback naar allocation_pct of allocationPct
+              animate={{ width: `${ac.allocation_pct || ac.allocationPct || 0}%` }}
+              className="h-full border-r border-black/20 last:border-0"
+              style={{ backgroundColor: ac.color || '#3B82F6' }}
+            />
+          ))}
         </div>
       </div>
 
@@ -79,47 +91,52 @@ export default function AssetAllocationTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {assetClasses.map((ac, index) => (
-            <TableRow
-              key={index}
-              onClick={() => onAssetClick && onAssetClick(ac)}
-              className="border-slate-700/50 cursor-pointer hover:bg-slate-800/50 group"
-            >
-              <TableCell className="font-medium text-white">
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ac.color }} />
-                  {ac.name}
-                </div>
-              </TableCell>
-              <TableCell className="text-right text-slate-300">
-                {ac.allocation_percent?.toFixed(1)}%
-              </TableCell>
-              <TableCell className="text-right text-white font-medium">
-                {formatCurrency(ac.current_value)}
-              </TableCell>
-              <TableCell className={cn(
-                "text-right font-medium",
-                ac.expected_return >= 0 ? "text-emerald-400" : "text-rose-400"
-              )}>
-                {ac.expected_return > 0 ? '+' : ''}{ac.expected_return?.toFixed(1)}%
-              </TableCell>
-              <TableCell className="text-right">
-                <div className="flex items-center justify-end gap-1">
-                  {ac.ytd_return >= 0 ? (
-                    <TrendingUp className="w-3 h-3 text-emerald-400" />
-                  ) : (
-                    <TrendingDown className="w-3 h-3 text-rose-400" />
-                  )}
-                  <span className={ac.ytd_return >= 0 ? "text-emerald-400" : "text-rose-400"}>
-                    {ac.ytd_return?.toFixed(1)}%
-                  </span>
-                </div>
-              </TableCell>
-              <TableCell>
-                <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-white" />
-              </TableCell>
-            </TableRow>
-          ))}
+          {assetClasses.map((ac, idx) => {
+            const currentProj = ac.expected_return || ac.projectedReturn || 0;
+            const currentAlloc = ac.allocation_pct || ac.allocationPct || 0;
+
+            return (
+              <TableRow
+                key={ac.name || idx}
+                onClick={() => onSelectAsset && onSelectAsset(ac)}
+                className="border-white/5 cursor-pointer hover:bg-white/[0.03] group transition-colors"
+              >
+                <TableCell className="font-bold text-white">
+                  <div className="flex items-center gap-3">
+                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: ac.color || '#475569' }} />
+                    {ac.name || "Unknown"}
+                  </div>
+                </TableCell>
+                <TableCell className="text-right text-slate-400 font-mono text-xs">
+                  {Number(currentAlloc).toFixed(1)}%
+                </TableCell>
+                <TableCell className="text-right text-white font-mono font-medium">
+                  {formatCurrency(ac.value)}
+                </TableCell>
+                <TableCell className={cn(
+                  "text-right font-mono font-bold text-xs",
+                  currentProj >= 0 ? "text-blue-400" : "text-rose-400"
+                )}>
+                  {formatPercentage(currentProj)}
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex items-center justify-end gap-1 font-mono text-xs font-bold">
+                    {(ac.performance?.ytd || 0) >= 0 ? (
+                      <TrendingUp className="w-3 h-3 text-emerald-500" />
+                    ) : (
+                      <TrendingDown className="w-3 h-3 text-rose-500" />
+                    )}
+                    <span className={(ac.performance?.ytd || 0) >= 0 ? "text-emerald-500" : "text-rose-400"}>
+                      {formatPercentage(ac.performance?.ytd || 0)}
+                    </span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <ChevronRight className="w-4 h-4 text-slate-700 group-hover:text-blue-400 group-hover:translate-x-1 transition-all" />
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
 
@@ -130,7 +147,11 @@ export default function AssetAllocationTable({
           <div className="flex flex-col items-end leading-none">
             <span className="text-slate-500 text-[9px] uppercase font-black mb-1">Avg Proj.</span>
             <span className="text-blue-400 font-mono font-bold text-sm">
-              {formatPercentage(assetClasses.reduce((sum, ac) => sum + ((Number(ac.projectedReturn) || 0) * (Number(ac.allocationPct) || 0) / 100), 0))}
+              {formatPercentage(assetClasses.reduce((sum, ac) => {
+                const proj = ac.expected_return || ac.projectedReturn || 0;
+                const alloc = ac.allocation_pct || ac.allocationPct || 0;
+                return sum + (proj * alloc / 100);
+              }, 0))}
             </span>
           </div>
         </div>

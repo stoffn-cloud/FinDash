@@ -30,7 +30,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import DashboardContent from "@/components/dashboard/DashboardContent";
 import AssetClassDetail from "@/components/dashboard/AssetClassDetail";
-import { mockPortfolio } from "@/api/mockData";
+import { mockPortfolio } from "@/app/api/mockData";
 import type { Portfolio, AssetClass } from "@/types/dashboard";
 
 export default function Dashboard() {

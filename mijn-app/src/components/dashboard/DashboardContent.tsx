@@ -209,9 +209,9 @@ export default function DashboardContent({ portfolio, onAssetClick }: DashboardC
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
              <AssetAllocationTable
-              assetClasses={filteredAssetClasses}
-              onAssetClick={onAssetClick}
-            />
+  assetClasses={filteredAssetClasses}
+  onSelectAsset={onAssetClick} // Verander onAssetClick naar onSelectAsset
+/>
             <SectorChart sectors={portfolio.sectorAllocation || []} />
           </div>
 
@@ -248,11 +248,11 @@ export default function DashboardContent({ portfolio, onAssetClick }: DashboardC
         </TabsContent>
 
         <TabsContent value="assets" className="focus-visible:outline-none focus-visible:ring-0">
-          <AssetAllocationTable
-            assetClasses={filteredAssetClasses}
-            onAssetClick={onAssetClick}
-          />
-        </TabsContent>
+  <AssetAllocationTable
+    assetClasses={filteredAssetClasses}
+    onSelectAsset={onAssetClick} // Ook hier aanpassen
+  />
+</TabsContent>
 
         <TabsContent value="markets" className="focus-visible:outline-none focus-visible:ring-0">
           <MarketsTab />
