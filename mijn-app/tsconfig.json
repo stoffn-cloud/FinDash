@@ -24,13 +24,11 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": [
-    "next-env.d.ts", 
-    "**/*.ts", 
-    "**/*.tsx", 
-    "src/data/MockData.js",
-    "src/api/mockData.js",
-    ".next/types/**/*.ts"
+"include": [
+    "next-env.d.ts",
+    ".next/types/**/*.ts",
+    "src/**/*.ts", 
+    "src/**/*.tsx"
   ],
   "exclude": ["node_modules"]
 }

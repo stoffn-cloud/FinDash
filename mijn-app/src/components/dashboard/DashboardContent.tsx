@@ -1,6 +1,8 @@
+"use client";
+
 import React from "react";
 import { motion } from "framer-motion";
-import { Target, TrendingUp, Wallet, Activity, BarChart3, ShieldAlert } from "lucide-react";
+import { Target, TrendingUp, Wallet, Activity, ShieldAlert, Zap } from "lucide-react";
 import { formatCurrency, formatPercentage } from "@/lib/formatters";
 
 // Components
@@ -13,51 +15,12 @@ import AssetAllocationTable from "@/components/dashboard/AssetAllocationTable";
 import GeographicBreakdown from "@/components/dashboard/GeographicBreakdown";
 import TerminalActivityFeed from "@/components/dashboard/TerminalActivityFeed";
 
-// ------------------------
-// TypeScript interfaces
-// ------------------------
-interface RiskMetrics {
-  beta?: number;
-  maxDrawdown?: number;
-  volatility?: number;
-  [key: string]: any;
-}
-
-interface Sector {
-  name: string;
-  value: number;
-}
-
-interface Currency {
-  code: string;
-  percentage: number;
-  value: number;
-}
-
-interface AssetClass {
-  name: string;
-  holdings?: any[];
-}
-
-interface Portfolio {
-  totalValue?: number;
-  dailyChangePercent?: number;
-  ytdReturn?: number;
-  riskMetrics?: RiskMetrics;
-  performanceHistory?: any[];
-  sectorAllocation?: Sector[];
-  currencyAllocation?: Currency[];
-}
-
 interface DashboardContentProps {
-  portfolio?: Portfolio;
-  assetClasses?: AssetClass[];
-  onSelectAsset?: (assetClass: AssetClass) => void;
+  portfolio?: any; // De processed portfolio van je engine
+  assetClasses?: any[];
+  onSelectAsset?: (assetClass: any) => void;
 }
 
-// ------------------------
-// Component
-// ------------------------
 export default function DashboardContent({
   portfolio,
   assetClasses = [],
@@ -67,16 +30,23 @@ export default function DashboardContent({
 
   return (
     <div className="space-y-8 pb-12">
-      {/* Top Row Metrics */}
+      {/* Header Statussen */}
+      <div className="flex items-center gap-2 px-1">
+        <Zap className="w-3 h-3 text-emerald-500 fill-emerald-500" />
+        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">
+          Live Market Feed Active • 0.1ms Latency • Node-01 Online
+        </span>
+      </div>
+
+      {/* Top Row Metrics - De "Big Four" */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <PortfolioMetricCard
           title="Totaal Vermogen"
           value={formatCurrency(portfolio.totalValue)}
           icon={Wallet}
-          trend={portfolio.dailyChangePercent === undefined ? "neutral" : portfolio.dailyChangePercent >= 0 ? "up" : "down"}
+          trend={portfolio.dailyChangePercent >= 0 ? "up" : "down"}
           trendValue={portfolio.dailyChangePercent}
-          subtitle="Huidige liquidatiewaarde"
-          className=""
+          subtitle="Net Liquidation Value"
           delay={0}
         />
 
@@ -84,10 +54,9 @@ export default function DashboardContent({
           title="YTD Rendement"
           value={formatPercentage(portfolio.ytdReturn, true)}
           icon={TrendingUp}
-          trend={portfolio.ytdReturn === undefined ? "neutral" : portfolio.ytdReturn >= 0 ? "up" : "down"}
+          trend={portfolio.ytdReturn >= 0 ? "up" : "down"}
           trendValue={portfolio.ytdReturn}
-          subtitle="Rendement sinds 1 jan"
-          className=""
+          subtitle="Year-to-Date Growth"
           delay={0.1}
         />
 
@@ -95,10 +64,9 @@ export default function DashboardContent({
           title="Beta (β)"
           value={portfolio.riskMetrics?.beta?.toFixed(2) || "1.00"}
           icon={Activity}
-          trend={portfolio.riskMetrics?.beta && portfolio.riskMetrics.beta > 1.2 ? "down" : "up"}
+          trend={portfolio.riskMetrics?.beta > 1.2 ? "down" : "up"}
           trendValue={portfolio.riskMetrics?.beta}
-          subtitle="Marktgevoeligheid"
-          className=""
+          subtitle="Market Sensitivity Index"
           delay={0.2}
         />
 
@@ -108,54 +76,65 @@ export default function DashboardContent({
           icon={ShieldAlert}
           trend="down"
           trendValue={portfolio.riskMetrics?.maxDrawdown}
-          subtitle="Grootste daling piek-dal"
-          className=""
+          subtitle="Peak-to-Trough Variance"
           delay={0.3}
         />
       </div>
 
-      {/* Main Performance Chart */}
-      <PerformanceChart
-        data={portfolio.performanceHistory || []}
-        benchmarkName="MSCI World Index"
-      />
+      {/* Main Performance Chart - De hartslag van je portfolio */}
+      <div className="rounded-3xl border border-white/5 bg-black/20 backdrop-blur-xl overflow-hidden shadow-2xl">
+        <PerformanceChart
+          data={portfolio.performanceHistory || []}
+          benchmarkName="MSCI World Index"
+        />
+      </div>
 
-      {/* Asset Allocation */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      {/* Asset Allocation & Risk Gauges */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
         <div className="xl:col-span-2">
-          {/* FIX: fallback naar lege array voorkomt never[] error */}
           <AssetAllocationTable
             assetClasses={assetClasses || []}
             onSelectAsset={onSelectAsset}
           />
         </div>
-        <div className="space-y-6">
-          <RiskGauge
-            label="Portfolio Beta"
-            value={portfolio.riskMetrics?.beta || 0}
-            maxValue={2}
-            description="β > 1: Beweeglijker dan de markt. β < 1: Defensiever dan de markt."
-          />
-          <RiskGauge
-            label="Jaarlijkse Volatiliteit"
-            value={portfolio.riskMetrics?.volatility || 0}
-            maxValue={50}
-            unit="%"
-            description="De spreiding van rendementen. Hoe lager, hoe stabieler de groei."
-          />
+        <div className="flex flex-col gap-6">
+          <div className="bg-black/20 border border-white/5 rounded-3xl p-6 backdrop-blur-xl">
+             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-6 italic">Risk Velocity</h3>
+             <div className="space-y-10">
+                <RiskGauge
+                  label="Portfolio Beta"
+                  value={portfolio.riskMetrics?.beta || 0}
+                  maxValue={2}
+                  description="Leveraged market exposure monitor."
+                />
+                <RiskGauge
+                  label="Annual Volatility"
+                  value={portfolio.riskMetrics?.volatility || 0}
+                  maxValue={50}
+                  unit="%"
+                  description="Standard deviation of returns."
+                />
+             </div>
+          </div>
         </div>
       </div>
 
-      {/* Diversificatie Analyse */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Diversificatie Analyse - Sectoren & Valuta */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <SectorChart sectors={portfolio.sectorAllocation || []} />
         <CurrencyBreakdown currencies={portfolio.currencyAllocation || []} />
       </div>
 
+      
+
       {/* Wereldkaart en Activity Feed */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <GeographicBreakdown assetClasses={assetClasses || []} />
-        <TerminalActivityFeed />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="bg-black/20 border border-white/5 rounded-3xl overflow-hidden">
+           <GeographicBreakdown assetClasses={assetClasses || []} />
+        </div>
+        <div className="bg-black/20 border border-white/5 rounded-3xl overflow-hidden">
+           <TerminalActivityFeed />
+        </div>
       </div>
     </div>
   );

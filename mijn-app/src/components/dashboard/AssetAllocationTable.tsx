@@ -1,3 +1,5 @@
+"use client";
+
 import { motion } from "framer-motion";
 import { 
   Table, 
@@ -10,23 +12,15 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ChevronRight, TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatCurrency, formatPercentage } from "@/lib/formatters";
 
-// 1. Definieer het type voor een enkele Asset Class
-export interface AssetClass {
-  id: string;
-  name: string;
-  allocation_percent: number;
-  current_value: number;
-  expected_return: number;
-  ytd_return: number;
-  color: string;
-}
+// Helper formatters (mocht je de lib niet hebben, staan ze hieronder als inline functies)
+const formatCurrency = (val: number) => `$${val.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+const formatPercentage = (val: number) => `${val >= 0 ? '+' : ''}${val.toFixed(1)}%`;
 
-// 2. Definieer de Props voor het component
 interface AssetAllocationTableProps {
-  assetClasses?: AssetClass[];
-  onSelectAsset?: (asset: AssetClass) => void;
+  // We gebruiken 'any' voor de assetClasses omdat ze uit de engine komen
+  assetClasses?: any[]; 
+  onSelectAsset?: (asset: any) => void;
 }
 
 export default function AssetAllocationTable({ 
@@ -34,39 +28,40 @@ export default function AssetAllocationTable({
   onSelectAsset 
 }: AssetAllocationTableProps) {
   
-  // Veiligheidscheck
   if (!assetClasses || assetClasses.length === 0) {
     return (
       <div className="rounded-2xl bg-slate-900/80 border border-slate-700/50 p-6 text-center">
         <h3 className="text-lg font-semibold text-white mb-2">Asset Allocation</h3>
-        <p className="text-slate-400">Geen data beschikbaar om weer te geven.</p>
+        <p className="text-slate-400">Wachten op live data...</p>
       </div>
     );
   }
 
-  const totalValue = assetClasses.reduce((sum, ac) => sum + (ac.current_value || 0), 0);
+  // Totaalwaarde berekenen op basis van de nieuwe veldnaam 'value'
+  const totalValue = assetClasses.reduce((sum, ac) => sum + (ac.value || 0), 0);
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl bg-gradient-to-br from-slate-900/80 to-slate-800/50 border border-slate-700/50 backdrop-blur-xl overflow-hidden"
+      className="rounded-2xl bg-gradient-to-br from-slate-900/40 to-slate-800/20 border border-white/5 backdrop-blur-xl overflow-hidden shadow-2xl"
     >
-      <div className="p-6 border-b border-slate-700/50 flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-white">Portfolio Overzicht</h3>
-        <Badge variant="outline" className="border-slate-600 text-slate-300">
-          {assetClasses.length} Categorieën
+      <div className="p-6 border-b border-white/5 flex items-center justify-between">
+        <h3 className="text-lg font-bold text-white uppercase tracking-tighter italic">Portfolio Mix</h3>
+        <Badge variant="outline" className="border-slate-800 text-slate-400 bg-slate-900/50">
+          {assetClasses.length} Sectoren
         </Badge>
       </div>
 
-      <div className="px-6 py-4 border-b border-slate-700/50 bg-slate-900/20">
-        <div className="h-3 rounded-full overflow-hidden flex bg-slate-800">
-          {assetClasses.map((ac) => (
+      {/* Visuele balk */}
+      <div className="px-6 py-4 border-b border-white/5 bg-black/20">
+        <div className="h-2 rounded-full overflow-hidden flex bg-slate-800/50 shadow-inner">
+          {assetClasses.map((ac, idx) => (
             <motion.div
-              key={ac.id}
+              key={ac.name + idx}
               initial={{ width: 0 }}
-              animate={{ width: `${ac.allocation_percent || 0}%` }}
-              className="h-full"
+              animate={{ width: `${ac.allocationPct || 0}%` }}
+              className="h-full border-r border-black/20 last:border-0"
               style={{ backgroundColor: ac.color || '#3B82F6' }}
             />
           ))}
@@ -75,69 +70,71 @@ export default function AssetAllocationTable({
 
       <Table>
         <TableHeader>
-          <TableRow className="border-slate-700/50 hover:bg-transparent">
-            <TableHead className="text-slate-400">Categorie</TableHead>
-            <TableHead className="text-slate-400 text-right">Allocatie</TableHead>
-            <TableHead className="text-slate-400 text-right">Waarde</TableHead>
-            <TableHead className="text-slate-400 text-right">Verwacht Rendement</TableHead>
-            <TableHead className="text-slate-400 text-right">YTD</TableHead>
+          <TableRow className="border-white/5 hover:bg-transparent">
+            <TableHead className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Categorie</TableHead>
+            <TableHead className="text-[10px] font-black uppercase text-slate-500 tracking-widest text-right">Allocatie</TableHead>
+            <TableHead className="text-[10px] font-black uppercase text-slate-500 tracking-widest text-right">Waarde</TableHead>
+            <TableHead className="text-[10px] font-black uppercase text-slate-500 tracking-widest text-right">Projectie</TableHead>
+            <TableHead className="text-[10px] font-black uppercase text-slate-500 tracking-widest text-right">YTD</TableHead>
             <TableHead className="w-10"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {assetClasses.map((ac) => (
+          {assetClasses.map((ac, idx) => (
             <TableRow
-              key={ac.id}
+              key={ac.name + idx}
               onClick={() => onSelectAsset && onSelectAsset(ac)}
-              className="border-slate-700/50 cursor-pointer hover:bg-slate-800/50 group"
+              className="border-white/5 cursor-pointer hover:bg-white/[0.03] group transition-colors"
             >
-              <TableCell className="font-medium text-white">
+              <TableCell className="font-bold text-white">
                 <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ac.color }} />
+                  <div className="w-1.5 h-1.5 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)]" style={{ backgroundColor: ac.color }} />
                   {ac.name}
                 </div>
               </TableCell>
-              <TableCell className="text-right text-slate-300">
-                {ac.allocation_percent?.toFixed(1)}%
+              <TableCell className="text-right text-slate-400 font-mono text-xs">
+                {ac.allocationPct?.toFixed(1)}%
               </TableCell>
-              <TableCell className="text-right text-white font-medium">
-                {formatCurrency(ac.current_value)}
+              <TableCell className="text-right text-white font-mono font-medium">
+                {formatCurrency(ac.value)}
               </TableCell>
               <TableCell className={cn(
-                "text-right font-medium",
-                ac.expected_return >= 0 ? "text-emerald-400" : "text-rose-400"
+                "text-right font-mono font-bold text-xs",
+                (ac.projectedReturn || 0) >= 0 ? "text-blue-400" : "text-rose-400"
               )}>
-                {formatPercentage(ac.expected_return, true, 1)}
+                {formatPercentage(ac.projectedReturn || 0)}
               </TableCell>
               <TableCell className="text-right">
-                <div className="flex items-center justify-end gap-1">
-                  {ac.ytd_return >= 0 ? (
-                    <TrendingUp className="w-3 h-3 text-emerald-400" />
+                <div className="flex items-center justify-end gap-1 font-mono text-xs font-bold">
+                  {(ac.performance?.ytd || 0) >= 0 ? (
+                    <TrendingUp className="w-3 h-3 text-emerald-500" />
                   ) : (
-                    <TrendingDown className="w-3 h-3 text-rose-400" />
+                    <TrendingDown className="w-3 h-3 text-rose-500" />
                   )}
-                  <span className={ac.ytd_return >= 0 ? "text-emerald-400" : "text-rose-400"}>
-                    {formatPercentage(ac.ytd_return, false, 1)}
+                  <span className={(ac.performance?.ytd || 0) >= 0 ? "text-emerald-500" : "text-rose-500"}>
+                    {formatPercentage(ac.performance?.ytd || 0)}
                   </span>
                 </div>
               </TableCell>
               <TableCell>
-                <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-white" />
+                <ChevronRight className="w-4 h-4 text-slate-700 group-hover:text-blue-400 group-hover:translate-x-1 transition-all" />
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
 
-      <div className="p-4 border-t border-slate-700/50 bg-slate-800/30 flex justify-between text-xs sm:text-sm">
-        <span className="text-slate-400">Totaal Portfolio</span>
-        <div className="flex gap-6">
-          <span className="text-white font-bold">{formatCurrency(totalValue)}</span>
-          <span className="text-slate-400">
-            Wtd. Return: <span className="text-emerald-400">
-              {(assetClasses.reduce((sum, ac) => sum + ((ac.expected_return || 0) * (ac.allocation_percent || 0) / 100), 0)).toFixed(1)}%
+      {/* Footer met totalen */}
+      <div className="p-4 border-t border-white/5 bg-white/[0.02] flex justify-between items-center text-[11px]">
+        <span className="text-slate-500 font-bold uppercase tracking-tighter">Terminal Total</span>
+        <div className="flex gap-8 items-center">
+          <span className="text-white font-mono font-black text-sm">{formatCurrency(totalValue)}</span>
+          <div className="flex flex-col items-end leading-none">
+            <span className="text-slate-500 text-[9px] uppercase font-black mb-1">Avg Proj.</span>
+            <span className="text-blue-400 font-mono font-bold text-sm">
+              {formatPercentage(assetClasses.reduce((sum, ac) => sum + ((ac.projectedReturn || 0) * (ac.allocationPct || 0) / 100), 0))}
             </span>
-          </span>
+          </div>
         </div>
       </div>
     </motion.div>

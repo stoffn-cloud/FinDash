@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   LayoutDashboard, ShieldAlert, History, Grid3X3, 
-  Globe, Calendar, Castle, Calculator, RefreshCw, Target 
+  Globe, Calendar, Castle, Calculator, RefreshCw, Target, PlusCircle
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -14,8 +14,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Logic Imports
 import { processPortfolioData } from "../logic/portfolioEngine";
-// @ts-ignore
-import { mockPortfolio } from "../api/mockData.js";
 
 // Dashboard Secties
 import DashboardContent from "@/components/dashboard/DashboardContent";
@@ -28,41 +26,73 @@ import SandboxTab from "@/components/dashboard/SandboxTab";
 import CalculationsTab from "@/components/dashboard/CalculationsTab";
 import AssetClassDetail from "@/components/dashboard/AssetClassDetail";
 import FutExTab from "@/components/dashboard/FutExTab"; 
+import PortfolioEditor from "../components/dashboard/PortfolioEditor";
 
-// Type voor de expert inputs
 export type FutExInputs = Record<string, number>;
 
 export default function Dashboard() {
   const [selectedAssetClass, setSelectedAssetClass] = useState<any>(null);
 
-  // 1. CENTRALE STATE VOOR FUTEX (Hierdoor reageert het hele dashboard op wijzigingen)
-  const [futExInputs, setFutExInputs] = useState<FutExInputs>({
-    Equity: 7.5,
-    FixedIncome: 3.0,
-    Crypto: 15.0,
-    Commodities: 4.0,
-    Cash: 2.0
+  // 1. LOKALE PORTEFEUILLE STATE
+  const [myAssets, setMyAssets] = useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("fin_dash_assets");
+      return saved ? JSON.parse(saved) : [
+        { symbol: "AAPL", amount: 10, assetClass: "Equity" },
+        { symbol: "BTC-USD", amount: 0.5, assetClass: "Crypto" }
+      ];
+    }
+    return [];
   });
 
-  // 2. DATA FETCHING
-  const { data: rawPortfolio, isLoading, refetch } = useQuery({
-    queryKey: ["portfolio"],
+  useEffect(() => {
+    localStorage.setItem("fin_dash_assets", JSON.stringify(myAssets));
+  }, [myAssets]);
+
+  const [futExInputs, setFutExInputs] = useState<FutExInputs>({
+    Equity: 7.5, FixedIncome: 3.0, Crypto: 15.0, Commodities: 4.0, Cash: 2.0
+  });
+
+  // 2. LIVE DATA FETCHING
+  const { data: livePriceData, isLoading, refetch, isFetching } = useQuery({
+    queryKey: ["livePrices", myAssets.map(a => a.symbol)],
     queryFn: async () => {
-      await new Promise(resolve => setTimeout(resolve, 400));
-      return mockPortfolio as any;
+      if (myAssets.length === 0) return [];
+      const response = await fetch("/api/prices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ symbols: myAssets.map(a => a.symbol) }),
+      });
+      return response.json();
     },
+    enabled: myAssets.length > 0,
+    refetchInterval: 60000,
   });
 
   // 3. ENGINE CALCULATIONS
-  // UseMemo zorgt ervoor dat we alleen herberekenen als de data OF de expert-inputs veranderen
   const processedPortfolio = useMemo(() => {
-    if (!rawPortfolio) return null;
-    // Hier gaat het om: we sturen twee argumenten naar de engine
-    return processPortfolioData(rawPortfolio, futExInputs);
-  }, [rawPortfolio, futExInputs]);
+    if (!livePriceData || livePriceData.error) return null;
 
-  // Loading State
-  if (isLoading || !processedPortfolio) {
+    const rawPortfolio = {
+      name: "Main Terminal",
+      assets: myAssets.map(asset => {
+        const live = livePriceData.find((l: any) => l.symbol === asset.symbol);
+        return {
+          ...asset,
+          value: (live?.price || 0) * asset.amount,
+          historicalPrices: {
+            lastClose: live?.lastClose,
+            monthAgo: live?.monthAgo,
+            yearAgo: live?.yearAgo
+          }
+        };
+      })
+    };
+
+    return processPortfolioData(rawPortfolio as any, futExInputs);
+  }, [livePriceData, myAssets, futExInputs]);
+
+  if (isLoading && myAssets.length > 0) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-10">
         <div className="max-w-7xl w-full space-y-8 text-center">
@@ -78,7 +108,6 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-200">
-      {/* Visual background effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-24 -left-24 w-96 h-96 bg-blue-600/10 rounded-full blur-[120px]" />
         <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-indigo-600/5 rounded-full blur-[150px]" />
@@ -87,34 +116,32 @@ export default function Dashboard() {
       <div className="relative z-10 p-6 md:p-10">
         <div className="max-w-7xl mx-auto space-y-8">
           
-          {/* Header met dynamische cijfers uit processedPortfolio.summary */}
           <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-800/50 pb-8">
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
               <div className="flex items-center gap-2 mb-3">
                 <span className="px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-[10px] font-black text-blue-400 uppercase tracking-widest">
-                  Live Terminal v2.1
+                  Live Engine Active
                 </span>
+                {isFetching && <RefreshCw className="w-3 h-3 animate-spin text-blue-500" />}
               </div>
               <h1 className="text-4xl md:text-6xl font-black text-white italic tracking-tighter uppercase">
-                {processedPortfolio.name}
+                {processedPortfolio?.name || "Empty Node"}
               </h1>
-              <div className="text-slate-500 text-sm font-medium mt-2 flex flex-wrap items-center gap-4">
-                <span>VALUE: <b className="text-white font-mono">${processedPortfolio.summary.totalValue?.toLocaleString()}</b></span>
-                <span className="w-1 h-1 bg-slate-700 rounded-full" />
-                {/* Reageert direct op de FutEx inputs */}
-                <span>PROJ. RETURN: <b className="text-blue-400">+{processedPortfolio.summary.futExpPct}%</b></span>
-                <span className="w-1 h-1 bg-slate-700 rounded-full" />
-                <span>SENTIMENT: <b className="text-slate-300">{processedPortfolio.summary.sentiment}</b></span>
-              </div>
+              {processedPortfolio && (
+                <div className="text-slate-500 text-sm font-medium mt-2 flex flex-wrap items-center gap-4 font-mono">
+                  <span>VALUE: <b className="text-white">${processedPortfolio.summary.totalValue.toLocaleString()}</b></span>
+                  <span className="w-1 h-1 bg-slate-700 rounded-full" />
+                  <span className="text-blue-400">EXP: +{processedPortfolio.summary.futExpPct}%</span>
+                  <span className="w-1 h-1 bg-slate-700 rounded-full" />
+                  <span className={Number(processedPortfolio.summary.performance.d) >= 0 ? "text-emerald-400" : "text-rose-400"}>
+                    24H: {processedPortfolio.summary.performance.d}%
+                  </span>
+                </div>
+              )}
             </motion.div>
             
-            <Button
-              variant="outline"
-              onClick={() => refetch()}
-              className="bg-slate-900/50 border-slate-800 text-white hover:bg-slate-800 rounded-xl px-8 py-6 h-auto transition-all"
-            >
-              <RefreshCw className="w-4 h-4 mr-3" />
-              Sync Node
+            <Button variant="outline" onClick={() => refetch()} className="bg-slate-900/50 border-slate-800 text-white rounded-xl">
+              <RefreshCw className="w-4 h-4 mr-3" /> Sync Node
             </Button>
           </header>
 
@@ -122,6 +149,7 @@ export default function Dashboard() {
             <div className="sticky top-6 z-50 mb-12">
               <TabsList className="bg-slate-900/40 backdrop-blur-3xl border border-white/5 p-1.5 rounded-2xl h-auto flex flex-wrap gap-1 shadow-2xl">
                 <NavTrigger value="dashboard" icon={LayoutDashboard} label="Overview" />
+                <NavTrigger value="manage" icon={PlusCircle} label="Editor" />
                 <NavTrigger value="strategy" icon={Target} label="FutEx" />
                 <NavTrigger value="risk" icon={ShieldAlert} label="Risk" />
                 <NavTrigger value="correlations" icon={Grid3X3} label="Matrix" />
@@ -135,48 +163,61 @@ export default function Dashboard() {
 
             <div className="mt-4">
               <AnimatePresence mode="wait">
-                <TabsContent value="dashboard" className="outline-none focus:ring-0">
-                  <DashboardContent 
-                    portfolio={processedPortfolio}
-                    assetClasses={processedPortfolio.assetClasses}
-                    onSelectAsset={setSelectedAssetClass} 
-                  />
+                <TabsContent value="dashboard" className="outline-none">
+                  {processedPortfolio ? (
+                    <DashboardContent 
+                      portfolio={processedPortfolio as any}
+                      assetClasses={processedPortfolio.assetClasses as any}
+                      onSelectAsset={setSelectedAssetClass} 
+                    />
+                  ) : <EmptyState />}
                 </TabsContent>
 
-                <TabsContent value="strategy" className="outline-none focus:ring-0">
-                  <FutExTab 
-                    assets={processedPortfolio.assets} 
-                    inputs={futExInputs}
-                    onInputChange={setFutExInputs}
-                  />
+                <TabsContent value="manage" className="outline-none">
+                  <PortfolioEditor assets={myAssets} setAssets={setMyAssets} />
                 </TabsContent>
 
-                <TabsContent value="risk" className="outline-none focus:ring-0">
-                  <RiskTab portfolio={processedPortfolio} />
+                <TabsContent value="strategy" className="outline-none">
+                  {processedPortfolio && (
+                    <FutExTab 
+                      assets={processedPortfolio.assets} 
+                      inputs={futExInputs}
+                      onInputChange={setFutExInputs}
+                    />
+                  )}
                 </TabsContent>
 
-                <TabsContent value="correlations" className="outline-none focus:ring-0">
-                  <CorrelationsTab assetClasses={processedPortfolio.assetClasses} portfolio={processedPortfolio} />
+                <TabsContent value="risk" className="outline-none">
+                  {processedPortfolio && <RiskTab portfolio={processedPortfolio as any} />}
                 </TabsContent>
 
-                <TabsContent value="markets" className="outline-none focus:ring-0">
+                <TabsContent value="correlations" className="outline-none">
+                  {processedPortfolio && (
+                    <CorrelationsTab 
+                      assetClasses={processedPortfolio.assetClasses as any} 
+                      portfolio={processedPortfolio as any} 
+                    />
+                  )}
+                </TabsContent>
+
+                <TabsContent value="markets" className="outline-none">
                   <MarketsTab />
                 </TabsContent>
 
-                <TabsContent value="calendar" className="outline-none focus:ring-0">
-                  <CalendarTab assetClasses={processedPortfolio.assetClasses} />
+                <TabsContent value="calendar" className="outline-none">
+                  {processedPortfolio && <CalendarTab assetClasses={processedPortfolio.assetClasses as any} />}
                 </TabsContent>
 
-                <TabsContent value="sandbox" className="outline-none focus:ring-0">
-                  <SandboxTab portfolio={processedPortfolio} />
+                <TabsContent value="sandbox" className="outline-none">
+                  {processedPortfolio && <SandboxTab portfolio={processedPortfolio as any} />}
                 </TabsContent>
 
-                <TabsContent value="calculations" className="outline-none focus:ring-0">
+                <TabsContent value="calculations" className="outline-none">
                   <CalculationsTab />
                 </TabsContent>
 
-                <TabsContent value="transactions" className="outline-none focus:ring-0">
-                   <TransactionHistory transactions={processedPortfolio.transactions || []} />
+                <TabsContent value="transactions" className="outline-none">
+                   <TransactionHistory transactions={processedPortfolio?.transactions || []} />
                 </TabsContent>
               </AnimatePresence>
             </div>
@@ -194,8 +235,15 @@ export default function Dashboard() {
   );
 }
 
-/** * Kleine helper component voor de navigatie knoppen
- */
+function EmptyState() {
+  return (
+    <div className="h-64 flex flex-col items-center justify-center border-2 border-dashed border-slate-800 rounded-3xl bg-slate-900/20 backdrop-blur-sm">
+      <p className="text-slate-500 font-medium">Geen assets gevonden in de terminal.</p>
+      <p className="text-slate-600 text-sm mt-1">Ga naar de Portfolio Editor om je posities toe te voegen.</p>
+    </div>
+  );
+}
+
 function NavTrigger({ value, icon: Icon, label }: { value: string, icon: any, label: string }) {
   return (
     <TabsTrigger 

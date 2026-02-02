@@ -1,3 +1,5 @@
+"use client";
+
 import { motion } from "framer-motion";
 import { 
   ComposedChart,
@@ -13,165 +15,192 @@ import {
 } from "recharts";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
+import { TrendingUp, BarChart3 } from "lucide-react";
 
 // ---------------------- TYPES ----------------------
 interface PerformancePoint {
-  date: string; // ISO date string
+  date: string;
   portfolioValue: number;
   benchmarkValue: number;
 }
 
-interface NormalizedPoint {
-  date: string;
-  Portfolio: number;
-  [key: string]: number | string;
-}
-
-interface CustomTooltipPayload {
-  name: string;
-  value: number;
-  color: string;
+interface PerformanceChartProps {
+  data?: PerformancePoint[];
+  benchmarkName?: string;
 }
 
 // ---------------------- CUSTOM TOOLTIP ----------------------
-const CustomTooltip = ({
-  active,
-  payload,
-  label
-}: TooltipProps<number, string>) => {
+// Gebruik 'any' voor de props om de Recharts mismatch te voorkomen
+const CustomTooltip = (props: any) => {
+  const { active, payload, label } = props;
+
   if (active && payload && payload.length) {
-    const data = payload as CustomTooltipPayload[];
     return (
-      <div className="bg-slate-900/95 border border-slate-700 backdrop-blur-md rounded-xl px-4 py-3 shadow-2xl">
-        <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-2">
-          {format(parseISO(label), "dd MMM yyyy")}
+      <div className="bg-black/90 border border-white/10 backdrop-blur-xl rounded-xl px-4 py-3 shadow-2xl ring-1 ring-white/5">
+        <p className="text-slate-500 text-[9px] font-black uppercase tracking-[0.2em] mb-3">
+          {label ? format(parseISO(label), "dd MMMM yyyy") : ""}
         </p>
-        {data.map((entry, index) => (
-          <div key={index} className="flex items-center justify-between gap-8 mb-1 last:mb-0">
-            <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: entry.color }} />
-              <span className="text-xs text-slate-300">{entry.name}</span>
+        <div className="space-y-2">
+          {payload.map((entry: any, index: number) => (
+            <div key={index} className="flex items-center justify-between gap-10">
+              <div className="flex items-center gap-2">
+                <div 
+                  className="w-1.5 h-1.5 rounded-full shadow-[0_0_8px_currentColor]" 
+                  style={{ color: entry.color, backgroundColor: entry.color }} 
+                />
+                <span className="text-[11px] font-bold text-slate-300 uppercase tracking-tight">
+                  {entry.name}
+                </span>
+              </div>
+              <span className="text-[11px] font-mono font-black text-white">
+                {entry.value >= 0 ? '+' : ''}{Number(entry.value).toFixed(2)}%
+              </span>
             </div>
-            <span className="text-xs font-mono font-bold text-white">
-              {entry.value >= 0 ? '+' : ''}{entry.value.toFixed(2)}%
-            </span>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     );
   }
   return null;
 };
 
-// ---------------------- PERFORMANCE CHART ----------------------
-interface PerformanceChartProps {
-  data?: PerformancePoint[];
-  benchmarkName?: string;
-}
-
 export default function PerformanceChart({
   data = [],
-  benchmarkName = "Benchmark",
+  benchmarkName = "MSCI World",
 }: PerformanceChartProps) {
   if (!data || data.length === 0) {
     return (
-      <div className="h-80 rounded-2xl bg-slate-900/50 border border-slate-700/50 flex items-center justify-center">
-        <p className="text-slate-500 italic">Geen rendementsdata beschikbaar</p>
+      <div className="h-96 rounded-3xl bg-black/20 border border-white/5 flex flex-col items-center justify-center">
+        <BarChart3 className="w-10 h-10 text-slate-800 mb-4 opacity-20" />
+        <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Awaiting yield data nodes...</p>
       </div>
     );
   }
 
-  // ---------------------- NORMALISATIE ----------------------
+  // ---------------------- NORMALISATIE (T0 = 0%) ----------------------
   const startPortfolio = data[0].portfolioValue || 1;
   const startBenchmark = data[0].benchmarkValue || 1;
 
-  const normalizedData: NormalizedPoint[] = data.map(item => ({
+  const normalizedData = data.map(item => ({
     date: item.date,
     Portfolio: ((item.portfolioValue - startPortfolio) / startPortfolio) * 100,
     [benchmarkName]: ((item.benchmarkValue - startBenchmark) / startBenchmark) * 100,
   }));
 
-  const lastPortfolio = normalizedData[normalizedData.length - 1].Portfolio || 0;
-  const lastBenchmark = normalizedData[normalizedData.length - 1][benchmarkName] as number || 0;
-  const alpha = lastPortfolio - lastBenchmark;
+  const lastP = normalizedData[normalizedData.length - 1].Portfolio;
+  const lastB = normalizedData[normalizedData.length - 1][benchmarkName] as number;
+  const alpha = lastP - lastB;
 
-  // ---------------------- RENDER ----------------------
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl bg-slate-900/50 border border-slate-700/50 p-6 backdrop-blur-sm"
+      initial={{ opacity: 0, scale: 0.99 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="rounded-3xl bg-black/20 border border-white/5 p-8 backdrop-blur-xl shadow-2xl relative overflow-hidden"
     >
+      {/* Background Decor */}
+      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500/20 to-transparent" />
+
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h3 className="text-lg font-bold text-white tracking-tight">Performance vs Markt</h3>
-          <p className="text-xs text-slate-500 uppercase font-medium tracking-wider">Cumulatief Rendement (%)</p>
+      <div className="flex items-start justify-between mb-10">
+        <div className="flex items-center gap-4">
+          <div className="p-3 rounded-2xl bg-blue-500/10 border border-blue-500/20">
+            <TrendingUp className="w-5 h-5 text-blue-500" />
+          </div>
+          <div>
+            <h3 className="text-sm font-black text-white italic uppercase tracking-[0.1em]">Performance Engine</h3>
+            <p className="text-[10px] font-mono text-slate-500 uppercase tracking-widest mt-1">Cumulative Yield vs Benchmark</p>
+          </div>
         </div>
-        <div className="bg-slate-800/50 px-4 py-2 rounded-xl border border-slate-700/50 text-right">
-          <p className="text-[10px] text-slate-500 font-bold uppercase mb-0.5">Alpha</p>
-          <p className={cn("text-lg font-mono font-bold", alpha >= 0 ? "text-emerald-400" : "text-rose-400")}>
-            {alpha >= 0 ? '↑' : '↓'} {Math.abs(alpha).toFixed(2)}%
-          </p>
+
+        <div className="flex gap-4">
+          <div className="bg-white/[0.03] px-5 py-3 rounded-2xl border border-white/5 text-right min-w-[120px]">
+            <p className="text-[9px] text-slate-500 font-black uppercase mb-1 tracking-tighter">Relative Alpha</p>
+            <p className={cn("text-xl font-mono font-black italic tracking-tighter", alpha >= 0 ? "text-emerald-400" : "text-rose-400")}>
+              {alpha >= 0 ? '+' : ''}{alpha.toFixed(2)}%
+            </p>
+          </div>
         </div>
       </div>
 
+      
+
       {/* Chart */}
-      <div className="h-80 w-full min-h-[320px]">
+      <div className="h-[340px] w-full mt-4">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={normalizedData}>
             <defs>
               <linearGradient id="colorPortfolio" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.1}/>
+                <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.2}/>
                 <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#ffffff" strokeOpacity={0.03} vertical={false} />
             <XAxis 
               dataKey="date"
               stroke="#475569"
-              fontSize={10}
+              fontSize={9}
+              fontWeight="900"
               tickLine={false}
               axisLine={false}
-              tickFormatter={(val) => format(parseISO(val), "MMM")}
-              interval="preserveStartEnd"
-              padding={{ left: 10, right: 10 }}
+              tickFormatter={(val) => format(parseISO(val), "MMM yy").toUpperCase()}
+              dy={15}
             />
             <YAxis
               stroke="#475569"
-              fontSize={10}
+              fontSize={9}
+              fontWeight="900"
               tickLine={false}
               axisLine={false}
-              tickFormatter={(val) => `${val}%`}
+              tickFormatter={(val) => `${val > 0 ? '+' : ''}${val}%`}
+              dx={-10}
             />
-            <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#334155', strokeWidth: 1 }} />
-            <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ paddingBottom: '20px', fontSize: '12px' }} />
+            <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#ffffff', strokeOpacity: 0.1, strokeWidth: 1 }} />
+            <Legend 
+              verticalAlign="top" 
+              align="right" 
+              iconType="circle" 
+              content={({ payload }) => (
+                <div className="flex justify-end gap-6 mb-8">
+                  {payload?.map((entry: any, index: number) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: entry.color }} />
+                      <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{entry.value}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            />
             
-            {/* Benchmark lijn */}
             <Line
               name={benchmarkName}
               type="monotone"
               dataKey={benchmarkName}
-              stroke="#64748b"
+              stroke="#475569"
               strokeWidth={1.5}
-              strokeDasharray="4 4"
+              strokeDasharray="6 6"
               dot={false}
               activeDot={false}
             />
 
-            {/* Portfolio area + lijn */}
             <Area
-              name="Jouw Portfolio"
+              name="Strategy Alpha"
               type="monotone"
               dataKey="Portfolio"
               stroke="#3B82F6"
               strokeWidth={3}
               fill="url(#colorPortfolio)"
               dot={false}
-              activeDot={{ r: 6, fill: "#3B82F6", stroke: "#0f172a", strokeWidth: 3 }}
+              activeDot={{ r: 4, fill: "#3B82F6", stroke: "#fff", strokeWidth: 2 }}
+              animationDuration={2500}
             />
           </ComposedChart>
         </ResponsiveContainer>
+      </div>
+
+      {/* Footer Info */}
+      <div className="mt-8 pt-6 border-t border-white/5 flex justify-between items-center text-[9px] font-mono text-slate-600">
+        <span className="uppercase tracking-[0.2em]">Data stream: Normalized T0 origin</span>
+        <span className="italic uppercase">Logarithmic variance suppression: OFF</span>
       </div>
     </motion.div>
   );

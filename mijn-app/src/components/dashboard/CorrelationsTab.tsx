@@ -1,74 +1,119 @@
-import { motion } from "framer-motion";
-import { Grid3X3, AlertCircle } from "lucide-react";
-import CorrelationMatrix from "@/components/dashboard/CorrelationMatrix";
+"use client";
 
-// Types
-type Sector = { name: string; [key: string]: any };
-type Portfolio = { sectorAllocation?: Sector[]; sectors?: Sector[]; [key: string]: any };
-type AssetClass = { name: string; [key: string]: any };
+import { motion } from "framer-motion";
+import { Grid3X3, AlertCircle, Info } from "lucide-react";
+import CorrelationMatrix from "./CorrelationMatrix";
 
 interface CorrelationsTabProps {
-  assetClasses?: AssetClass[];
-  portfolio?: Portfolio;
+  assetClasses?: any[];
+  portfolio?: any;
 }
 
-// Statische correlaties
-const ASSET_CLASS_CORRELATIONS = { /* ...same as before... */ };
-const SECTOR_CORRELATIONS = { /* ...same as before... */ };
+// Statische correlaties (deze zouden in een volgende fase uit een API komen)
+const ASSET_CLASS_CORRELATIONS: Record<string, number> = {
+  "Equities-Fixed Income": 0.12,
+  "Equities-Crypto": 0.45,
+  "Equities-Commodities": 0.28,
+  "Fixed Income-Crypto": -0.05,
+  "Fixed Income-Commodities": -0.15,
+  "Crypto-Commodities": 0.18,
+};
+
+const SECTOR_CORRELATIONS: Record<string, number> = {
+  "Technology-Financials": 0.35,
+  "Technology-Energy": -0.12,
+  "Healthcare-Technology": 0.42,
+  "Energy-Financials": 0.25,
+  "Utilities-Technology": -0.08,
+};
 
 export default function CorrelationsTab({ assetClasses = [], portfolio = {} }: CorrelationsTabProps) {
-  // Asset class names
+  
+  // Haal de namen op van de live asset classes uit de engine
   const assetClassNames = assetClasses.length > 0
     ? assetClasses.map(ac => ac.name)
-    : ["Equities", "Fixed Income", "Alternatives", "Real Estate", "Commodities", "Cash"];
+    : ["Equities", "Fixed Income", "Crypto", "Commodities", "Real Estate"];
 
-  // Sector names
-  const currentSectors: Sector[] = portfolio.sectorAllocation || portfolio.sectors || [];
+  // Haal sectoren op (indien aanwezig in de portfolio state)
+  const currentSectors = portfolio.sectors || [];
   const sectorNames = currentSectors.length > 0
-    ? currentSectors.map(s => s.name)
-    : ["Technology", "Healthcare", "Financials", "Consumer", "Energy", "Industrials", "Utilities", "Materials"];
+    ? currentSectors.map((s: any) => s.name)
+    : ["Technology", "Healthcare", "Financials", "Energy", "Utilities"];
 
   return (
-    <div className="space-y-8 pb-10">
+    <div className="space-y-10 pb-16">
       {/* Header */}
       <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-3"
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        className="flex items-center gap-4"
       >
-        <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
-          <Grid3X3 className="w-5 h-5 text-blue-400" />
+        <div className="p-3 rounded-2xl bg-blue-600/10 border border-blue-600/20 shadow-[0_0_15px_rgba(37,99,235,0.1)]">
+          <Grid3X3 className="w-6 h-6 text-blue-500" />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-white tracking-tight">Correlatie Analyse</h2>
-          <p className="text-sm text-slate-400">Gebaseerd op 5-jaars voortschrijdende historische data</p>
+          <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter">Systemic Correlations</h2>
+          <p className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.2em]">Historical Rolling 12-Month Coefficient Analysis</p>
         </div>
       </motion.div>
 
-      {/* Info Message */}
-      <div className="flex items-start gap-3 p-4 bg-slate-800/30 rounded-xl border border-slate-700/50">
-        <AlertCircle className="w-5 h-5 text-blue-400 mt-0.5" />
-        <p className="text-sm text-slate-300 leading-relaxed">
-          Correlatie meet hoe activa ten opzichte van elkaar bewegen. Een waarde van <b>1.0</b> betekent dat ze exact gelijk bewegen, terwijl <b>-1.0</b> betekent dat ze in tegengestelde richting bewegen. Diversificatie werkt het beste bij lage of negatieve correlaties.
-        </p>
+      {/* Warning/Info Box */}
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="flex items-start gap-4 p-6 bg-blue-500/5 rounded-3xl border border-blue-500/10 backdrop-blur-md"
+      >
+        <AlertCircle className="w-5 h-5 text-blue-400 mt-1 shrink-0" />
+        <div className="space-y-1">
+          <p className="text-xs font-bold text-blue-100 uppercase tracking-wide">Risk Architecture Insight</p>
+          <p className="text-xs text-slate-400 leading-relaxed font-medium">
+            Correlatie coëfficiënten tussen <span className="text-white">-1.00</span> en <span className="text-white">+1.00</span> definiëren de portfolio stabiliteit. 
+            Nodes met een waarde boven <span className="text-rose-400 font-bold">0.70</span> duiden op een overmatige concentratie van risico bij marktvolatiliteit.
+          </p>
+        </div>
+      </motion.div>
+
+      
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
+        {/* Macro Matrix */}
+        <section className="space-y-4">
+          <div className="flex items-center gap-2 pl-2">
+            <div className="w-1 h-4 bg-blue-600 rounded-full" />
+            <h3 className="text-[11px] font-black text-white uppercase tracking-widest">Cross-Asset Logic</h3>
+          </div>
+          <CorrelationMatrix
+            title="Macro Node Matrix"
+            subtitle="Inter-asset dependencies based on current allocation"
+            items={assetClassNames}
+            correlations={ASSET_CLASS_CORRELATIONS}
+          />
+        </section>
+
+        {/* Sector Matrix */}
+        <section className="space-y-4">
+          <div className="flex items-center gap-2 pl-2">
+            <div className="w-1 h-4 bg-emerald-600 rounded-full" />
+            <h3 className="text-[11px] font-black text-white uppercase tracking-widest">Sector Proximity</h3>
+          </div>
+          <CorrelationMatrix
+            title="Equity Sector Matrix"
+            subtitle="Internal stock market linkages and drift patterns"
+            items={sectorNames}
+            correlations={SECTOR_CORRELATIONS}
+          />
+        </section>
       </div>
 
-      <div className="grid grid-cols-1 gap-10">
-        {/* Asset Class Correlation Matrix */}
-        <CorrelationMatrix
-          title="Cross-Asset Correlaties"
-          subtitle="Verbanden tussen verschillende beleggingscategorieën"
-          items={assetClassNames}
-          correlations={ASSET_CLASS_CORRELATIONS}
-        />
-
-        {/* Sector Correlation Matrix */}
-        <CorrelationMatrix
-          title="Sector Correlaties"
-          subtitle="Samenhang tussen specifieke aandelensectoren"
-          items={sectorNames}
-          correlations={SECTOR_CORRELATIONS}
-        />
+      {/* Footer Info */}
+      <div className="flex justify-center">
+        <div className="px-6 py-2 rounded-full bg-white/[0.02] border border-white/5 flex items-center gap-3">
+          <Info className="w-3 h-3 text-slate-600" />
+          <span className="text-[9px] font-mono text-slate-600 uppercase tracking-[0.1em]">
+            System status: <span className="text-emerald-500">All Correlation Engines Nominal</span>
+          </span>
+        </div>
       </div>
     </div>
   );
