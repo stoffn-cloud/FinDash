@@ -1,79 +1,27 @@
 import { useState, useEffect } from "react";
-import { mockPortfolio } from "./mockData";
+// DE IMPORT VAN MOCKDATA IS VERWIJDERD
 import { Portfolio, AssetClass, Holding } from "../types/dashboard";
 
+// Een minimaal start-portfolio zodat de app niet crasht terwijl hij laadt
+const INITIAL_PORTFOLIO: Portfolio = {
+  totalValue: 0,
+  ytdReturn: 0,
+  assetClasses: [],
+  performanceHistory: [],
+  riskMetrics: { beta: 0, volatility: 0, maxDrawdown: 0 }
+};
+
 class PortfolioStore {
-  private portfolio: Portfolio = JSON.parse(JSON.stringify(mockPortfolio));
+  private portfolio: Portfolio = INITIAL_PORTFOLIO;
   private listeners: (() => void)[] = [];
 
   constructor() {
-    // Initial calculation to set quantities if missing
-    this.initializeQuantities();
-  }
-
-  private initializeQuantities() {
-    this.portfolio.assetClasses?.forEach(ac => {
-      ac.holdings?.forEach(h => {
-        // Mock a price for initial quantity if not present.
-        // We derive quantity from the mock value using a reasonable base price.
-        if (!(h as any).quantity) {
-          let basePrice = 150; // Default base price for stocks
-          if (h.ticker === 'GOLD') basePrice = 2000;
-          if (h.ticker === 'USD' || h.ticker === 'EUR' || h.ticker === 'GBP' || h.ticker === 'JPY') basePrice = 1;
-
-          (h as any).quantity = Math.round((h.value / basePrice) * 100) / 100;
-          (h as any).price = basePrice;
-          // Store a derived YTD start value to keep returns consistent with live prices
-          (h as any).ytdStartValue = h.value / (1 + (h.return_ytd || 0) / 100);
-        }
-      });
-    });
+    // We laden de data zodra de store wordt aangemaakt
+    this.fetchLivePrices();
   }
 
   getPortfolio(): Portfolio {
     return this.portfolio;
-  }
-
-  setPortfolio(portfolio: Portfolio) {
-    this.portfolio = portfolio;
-    this.notify();
-  }
-
-  updateHoldings(assetClassId: string, holdings: Holding[]) {
-    if (!this.portfolio.assetClasses) return;
-    const acIndex = this.portfolio.assetClasses.findIndex(ac => ac.id === assetClassId);
-    if (acIndex !== -1) {
-      this.portfolio.assetClasses[acIndex].holdings = holdings;
-      this.calculateMetrics();
-      this.notify();
-    }
-  }
-
-  public calculateMetrics() {
-    let totalValue = 0;
-    let totalYtdReturnWeighted = 0;
-
-    this.portfolio.assetClasses?.forEach(ac => {
-      let acValue = 0;
-      let acYtdReturnWeighted = 0;
-
-      ac.holdings?.forEach(h => {
-        acValue += h.value;
-        acYtdReturnWeighted += (h.return_ytd || 0) * h.value;
-      });
-
-      ac.current_value = Math.round(acValue * 100) / 100;
-      ac.ytd_return = acValue > 0 ? Math.round((acYtdReturnWeighted / acValue) * 100) / 100 : 0;
-      totalValue += acValue;
-      totalYtdReturnWeighted += acYtdReturnWeighted;
-    });
-
-    this.portfolio.totalValue = Math.round(totalValue * 100) / 100;
-    this.portfolio.ytdReturn = totalValue > 0 ? Math.round((totalYtdReturnWeighted / totalValue) * 100) / 100 : 0;
-
-    this.portfolio.assetClasses?.forEach(ac => {
-      ac.allocation_percent = totalValue > 0 ? Math.round(((ac.current_value / totalValue) * 100) * 100) / 100 : 0;
-    });
   }
 
   subscribe(listener: () => void) {
@@ -87,49 +35,65 @@ class PortfolioStore {
     this.listeners.forEach(l => l());
   }
 
+  // DE KERN: Deze functie haalt de data op van je Yahoo Finance backend
   async fetchLivePrices() {
-    const tickers = new Set<string>();
-    this.portfolio.assetClasses?.forEach(ac => {
-      ac.holdings?.forEach(h => {
-        if (h.ticker && h.ticker !== 'USD' && h.ticker !== 'EUR') {
-          tickers.add(h.ticker);
-        }
-      });
-    });
-
-    if (tickers.size === 0) return;
-
     try {
-      const response = await fetch(`/api/quotes?symbols=${Array.from(tickers).join(',')}`);
-      if (!response.ok) throw new Error("Failed to fetch");
-      const quotes = await response.json();
+      // 1. Haal eerst je opgeslagen portfolio-structuur op (tickers die je wilt volgen)
+      const portResponse = await fetch('http://localhost:5000/api/portfolio');
+      if (!portResponse.ok) throw new Error("Could not fetch portfolio structure");
+      const currentPortfolio = await portResponse.json();
 
-      this.portfolio.assetClasses?.forEach(ac => {
-        ac.holdings?.forEach(h => {
+      // 2. Verzamel alle tickers voor Yahoo Finance
+      const tickers = new Set<string>();
+      currentPortfolio.assetClasses?.forEach((ac: any) => {
+        ac.holdings?.forEach((h: any) => {
+          if (h.ticker) tickers.add(h.ticker);
+        });
+      });
+
+      if (tickers.size === 0) {
+        this.portfolio = currentPortfolio;
+        this.notify();
+        return;
+      }
+
+      // 3. Haal de LIVE prijzen op bij je Yahoo Finance endpoint
+      const quoteResponse = await fetch(`http://localhost:5000/api/quotes?symbols=${Array.from(tickers).join(',')}`);
+      if (!quoteResponse.ok) throw new Error("Failed to fetch live quotes");
+      const quotes = await quoteResponse.json();
+
+      // 4. Update de prijzen in de holdings
+      currentPortfolio.assetClasses?.forEach((ac: any) => {
+        ac.holdings?.forEach((h: any) => {
           const quote = quotes.find((q: any) => q.symbol === h.ticker);
           if (quote) {
-            if (!(h as any).quantity) {
-               (h as any).quantity = 100; // Default
-            }
-            h.value = (h as any).quantity * quote.regularMarketPrice;
-
-            // Calculate live YTD return based on derived start value if available
-            if ((h as any).ytdStartValue) {
-              h.return_ytd = Math.round(((h.value / (h as any).ytdStartValue) - 1) * 100 * 100) / 100;
-            } else {
-              h.return_ytd = quote.regularMarketChangePercent;
-            }
-
-            (h as any).price = quote.regularMarketPrice;
+            h.price = quote.regularMarketPrice;
+            h.value = (h.quantity || 0) * h.price;
+            h.return_ytd = quote.regularMarketChangePercent;
           }
         });
       });
 
-      this.calculateMetrics();
+      this.portfolio = currentPortfolio;
+      this.calculateMetrics(); // Bereken totalen op basis van live prijzen
       this.notify();
     } catch (error) {
       console.error("Failed to fetch live prices:", error);
     }
+  }
+
+  public calculateMetrics() {
+    let totalValue = 0;
+    this.portfolio.assetClasses?.forEach(ac => {
+      let acValue = 0;
+      ac.holdings?.forEach(h => { acValue += (h.value || 0); });
+      ac.current_value = acValue;
+      totalValue += acValue;
+    });
+    this.portfolio.totalValue = totalValue;
+    this.portfolio.assetClasses?.forEach(ac => {
+      ac.allocation_percent = totalValue > 0 ? (ac.current_value! / totalValue) * 100 : 0;
+    });
   }
 }
 
@@ -146,7 +110,6 @@ export function usePortfolio() {
 
   return {
     portfolio,
-    fetchLivePrices: () => portfolioStore.fetchLivePrices(),
-    updateHoldings: (id: string, holdings: any[]) => portfolioStore.updateHoldings(id, holdings)
+    fetchLivePrices: () => portfolioStore.fetchLivePrices()
   };
 }
