@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { usePortfolio } from "@/api/portfolioStore";
 import { 
   Bell,
   Settings,
@@ -34,16 +35,14 @@ import type { Portfolio, AssetClass } from "@/types/dashboard";
 
 export default function Dashboard() {
   const [selectedAssetClass, setSelectedAssetClass] = useState<AssetClass | null>(null);
+  const { portfolio, fetchLivePrices } = usePortfolio();
+  const [isFetching, setIsFetching] = useState(false);
 
-  const { data: portfolio, refetch, isFetching } = useQuery<Portfolio>({
-    queryKey: ["portfolio"],
-    queryFn: async () => {
-      // Simuleer vertraging voor de Fintech feel
-      await new Promise(resolve => setTimeout(resolve, 800));
-      return mockPortfolio as unknown as Portfolio;
-    },
-    initialData: mockPortfolio as unknown as Portfolio
-  });
+  const handleRefetch = async () => {
+    setIsFetching(true);
+    await fetchLivePrices();
+    setIsFetching(false);
+  };
 
   const handleAssetClick = (asset: AssetClass) => {
     setSelectedAssetClass(asset);
@@ -106,7 +105,7 @@ export default function Dashboard() {
                       variant="ghost"
                       size="icon"
                       className="h-9 w-9 text-slate-400"
-                      onClick={() => refetch()}
+                      onClick={handleRefetch}
                       disabled={isFetching}
                     >
                       <RefreshCcw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />

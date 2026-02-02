@@ -20,6 +20,7 @@ import PerformanceChart from "./PerformanceChart";
 import SectorChart from "./SectorChart";
 import AssetAllocationTable from "./AssetAllocationTable";
 import MarketsTab from "./MarketsTab";
+import PortfolioEditor from "./PortfolioEditor";
 import { cn } from "@/lib/utils";
 import type { Portfolio, AssetClass } from "@/types/dashboard";
 
@@ -138,6 +139,9 @@ export default function DashboardContent({ portfolio, onAssetClick }: DashboardC
             <TabsTrigger value="markets" className="px-6 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
               MARKETS
             </TabsTrigger>
+            <TabsTrigger value="editor" className="px-6 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+              EDITOR
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -252,6 +256,10 @@ export default function DashboardContent({ portfolio, onAssetClick }: DashboardC
 
         <TabsContent value="markets" className="focus-visible:outline-none focus-visible:ring-0">
           <MarketsTab />
+        </TabsContent>
+
+        <TabsContent value="editor" className="focus-visible:outline-none focus-visible:ring-0">
+          <PortfolioEditor />
         </TabsContent>
       </Tabs>
     </div>

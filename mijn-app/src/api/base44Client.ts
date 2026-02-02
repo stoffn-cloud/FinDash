@@ -1,4 +1,4 @@
-import { mockPortfolio } from "./mockData";
+import { portfolioStore } from "./portfolioStore";
 
 // We maken een universele "nep" client die altijd jouw data teruggeeft
 export const base44 = {
@@ -6,15 +6,15 @@ export const base44 = {
   useQuery: (key: any) => {
     console.log("Dashboard vraagt data op voor:", key);
     return {
-      data: mockPortfolio,
+      data: portfolioStore.getPortfolio(),
       isLoading: false,
       error: null,
-      refetch: () => console.log("Refetch aangeroepen")
+      refetch: () => portfolioStore.fetchLivePrices()
     };
   },
   
   // Mocht de code directe API-calls doen (async/await)
   get: async (path: string) => {
-    return mockPortfolio;
+    return portfolioStore.getPortfolio();
   }
 };

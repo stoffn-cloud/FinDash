@@ -55,10 +55,12 @@
     "react-resizable-panels": "^4.5.6",
     "recharts": "latest",
     "tailwind-merge": "latest",
-    "vaul": "^1.1.2"
+    "vaul": "^1.1.2",
+    "yahoo-finance2": "^3.13.0"
   },
   "devDependencies": {
     "@eslint/js": "latest",
+    "@playwright/test": "^1.58.1",
     "@tailwindcss/vite": "^4.1.18",
     "@types/react": "latest",
     "@types/react-dom": "latest",
