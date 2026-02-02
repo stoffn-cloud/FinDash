@@ -3,7 +3,7 @@ import { calculateHistoricalReturn } from "./ExpectedReturnCalc/HistExpReturn";
 import { calculateFutureReturn } from "./ExpectedReturnCalc/FutExpReturn";
 import { calculatePastReturns } from "./PastReturnCalc/RealizedReturn"; // Nieuwe import
 
-export const processPortfolioData = (rawPortfolio: any) => {
+export const processPortfolioData = (rawPortfolio: any, futExInputs: Record<string, number> = {}) => {
   if (!rawPortfolio || !rawPortfolio.assets) return null;
 
   // Realized Returns (Wat er IS gebeurd)

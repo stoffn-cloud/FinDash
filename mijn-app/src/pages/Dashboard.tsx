@@ -1,25 +1,19 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  LayoutDashboard,
-  ShieldAlert,
-  History,
-  Grid3X3,
-  Globe,
-  Calendar,
-  Castle,
-  Calculator,
-  RefreshCw,
-  TrendingUp
+  LayoutDashboard, ShieldAlert, History, Grid3X3, 
+  Globe, Calendar, Castle, Calculator, RefreshCw, Target 
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+// Logic Imports
+import { processPortfolioData } from "../logic/portfolioEngine";
 // @ts-ignore
 import { mockPortfolio } from "../api/mockData.js";
 
@@ -33,32 +27,50 @@ import CalendarTab from "@/components/dashboard/CalendarTab";
 import SandboxTab from "@/components/dashboard/SandboxTab";
 import CalculationsTab from "@/components/dashboard/CalculationsTab";
 import AssetClassDetail from "@/components/dashboard/AssetClassDetail";
+import FutExTab from "@/components/dashboard/FutExTab"; 
+
+// Type voor de expert inputs
+export type FutExInputs = Record<string, number>;
 
 export default function Dashboard() {
   const [selectedAssetClass, setSelectedAssetClass] = useState<any>(null);
 
-  // --- CENTRALE DATA FETCH ---
-  const { data: portfolio, isLoading, refetch } = useQuery({
+  // 1. CENTRALE STATE VOOR FUTEX (Hierdoor reageert het hele dashboard op wijzigingen)
+  const [futExInputs, setFutExInputs] = useState<FutExInputs>({
+    Equity: 7.5,
+    FixedIncome: 3.0,
+    Crypto: 15.0,
+    Commodities: 4.0,
+    Cash: 2.0
+  });
+
+  // 2. DATA FETCHING
+  const { data: rawPortfolio, isLoading, refetch } = useQuery({
     queryKey: ["portfolio"],
     queryFn: async () => {
-      // Simuleer een korte vertraging voor de pro-look
       await new Promise(resolve => setTimeout(resolve, 400));
       return mockPortfolio as any;
     },
   });
 
-  // Haal assetClasses direct uit de centrale portfolio bron
-  const assetClasses = portfolio?.assetClasses || [];
+  // 3. ENGINE CALCULATIONS
+  // UseMemo zorgt ervoor dat we alleen herberekenen als de data OF de expert-inputs veranderen
+  const processedPortfolio = useMemo(() => {
+    if (!rawPortfolio) return null;
+    // Hier gaat het om: we sturen twee argumenten naar de engine
+    return processPortfolioData(rawPortfolio, futExInputs);
+  }, [rawPortfolio, futExInputs]);
 
-  if (isLoading) {
+  // Loading State
+  if (isLoading || !processedPortfolio) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-10">
-        <div className="max-w-7xl w-full space-y-8">
-          <Skeleton className="h-12 w-72 bg-slate-900 rounded-full" />
-          <div className="grid grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32 bg-slate-900 rounded-2xl" />)}
-          </div>
-          <Skeleton className="h-96 bg-slate-900 rounded-3xl" />
+        <div className="max-w-7xl w-full space-y-8 text-center">
+           <Skeleton className="h-12 w-72 bg-slate-900 rounded-full mx-auto" />
+           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+             {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32 bg-slate-900 rounded-2xl" />)}
+           </div>
+           <Skeleton className="h-96 bg-slate-900 rounded-3xl" />
         </div>
       </div>
     );
@@ -66,6 +78,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-200">
+      {/* Visual background effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-24 -left-24 w-96 h-96 bg-blue-600/10 rounded-full blur-[120px]" />
         <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-indigo-600/5 rounded-full blur-[150px]" />
@@ -74,7 +87,7 @@ export default function Dashboard() {
       <div className="relative z-10 p-6 md:p-10">
         <div className="max-w-7xl mx-auto space-y-8">
           
-          {/* Header Sectie */}
+          {/* Header met dynamische cijfers uit processedPortfolio.summary */}
           <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-800/50 pb-8">
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
               <div className="flex items-center gap-2 mb-3">
@@ -83,15 +96,16 @@ export default function Dashboard() {
                 </span>
               </div>
               <h1 className="text-4xl md:text-6xl font-black text-white italic tracking-tighter uppercase">
-                {portfolio?.name}
+                {processedPortfolio.name}
               </h1>
-              <p className="text-slate-500 text-sm font-medium mt-2 flex items-center gap-4">
-                <span>VALUE: <b className="text-white font-mono">${portfolio?.totalValue?.toLocaleString()}</b></span>
+              <div className="text-slate-500 text-sm font-medium mt-2 flex flex-wrap items-center gap-4">
+                <span>VALUE: <b className="text-white font-mono">${processedPortfolio.summary.totalValue?.toLocaleString()}</b></span>
                 <span className="w-1 h-1 bg-slate-700 rounded-full" />
-                <span>YTD: <b className="text-emerald-400">+{portfolio?.ytdReturn}%</b></span>
+                {/* Reageert direct op de FutEx inputs */}
+                <span>PROJ. RETURN: <b className="text-blue-400">+{processedPortfolio.summary.futExpPct}%</b></span>
                 <span className="w-1 h-1 bg-slate-700 rounded-full" />
-                <span>CURRENCY: <b className="text-slate-300">{portfolio?.currency}</b></span>
-              </p>
+                <span>SENTIMENT: <b className="text-slate-300">{processedPortfolio.summary.sentiment}</b></span>
+              </div>
             </motion.div>
             
             <Button
@@ -108,6 +122,7 @@ export default function Dashboard() {
             <div className="sticky top-6 z-50 mb-12">
               <TabsList className="bg-slate-900/40 backdrop-blur-3xl border border-white/5 p-1.5 rounded-2xl h-auto flex flex-wrap gap-1 shadow-2xl">
                 <NavTrigger value="dashboard" icon={LayoutDashboard} label="Overview" />
+                <NavTrigger value="strategy" icon={Target} label="FutEx" />
                 <NavTrigger value="risk" icon={ShieldAlert} label="Risk" />
                 <NavTrigger value="correlations" icon={Grid3X3} label="Matrix" />
                 <NavTrigger value="markets" icon={Globe} label="Markets" />
@@ -120,44 +135,48 @@ export default function Dashboard() {
 
             <div className="mt-4">
               <AnimatePresence mode="wait">
-                <TabsContent value="dashboard" className="outline-none">
+                <TabsContent value="dashboard" className="outline-none focus:ring-0">
                   <DashboardContent 
-                    portfolio={portfolio}
-                    assetClasses={assetClasses}
+                    portfolio={processedPortfolio}
+                    assetClasses={processedPortfolio.assetClasses}
                     onSelectAsset={setSelectedAssetClass} 
                   />
                 </TabsContent>
 
-                {/* Risk Tab met Data Injectie */}
-                <TabsContent value="risk" className="outline-none">
-                  <RiskTab {...({ portfolio } as any)} />
+                <TabsContent value="strategy" className="outline-none focus:ring-0">
+                  <FutExTab 
+                    assets={processedPortfolio.assets} 
+                    inputs={futExInputs}
+                    onInputChange={setFutExInputs}
+                  />
                 </TabsContent>
 
-                {/* Correlations Tab met Data Injectie */}
-                <TabsContent value="correlations" className="outline-none">
-                  <CorrelationsTab {...({ assetClasses, portfolio } as any)} />
+                <TabsContent value="risk" className="outline-none focus:ring-0">
+                  <RiskTab portfolio={processedPortfolio} />
                 </TabsContent>
 
-                <TabsContent value="markets" className="outline-none">
+                <TabsContent value="correlations" className="outline-none focus:ring-0">
+                  <CorrelationsTab assetClasses={processedPortfolio.assetClasses} portfolio={processedPortfolio} />
+                </TabsContent>
+
+                <TabsContent value="markets" className="outline-none focus:ring-0">
                   <MarketsTab />
                 </TabsContent>
 
-                <TabsContent value="calendar" className="outline-none">
-                  <CalendarTab {...({ assetClasses } as any)} />
+                <TabsContent value="calendar" className="outline-none focus:ring-0">
+                  <CalendarTab assetClasses={processedPortfolio.assetClasses} />
                 </TabsContent>
 
-                {/* Sandbox Tab met Data Injectie */}
-                <TabsContent value="sandbox" className="outline-none">
-                  <SandboxTab {...({ portfolio } as any)} />
+                <TabsContent value="sandbox" className="outline-none focus:ring-0">
+                  <SandboxTab portfolio={processedPortfolio} />
                 </TabsContent>
 
-                <TabsContent value="calculations" className="outline-none">
+                <TabsContent value="calculations" className="outline-none focus:ring-0">
                   <CalculationsTab />
                 </TabsContent>
 
-                {/* Transactions Tab met Data Injectie uit de nieuwe MockData */}
-                <TabsContent value="transactions" className="outline-none">
-                  <TransactionHistory {...({ transactions: portfolio?.transactions } as any)} />
+                <TabsContent value="transactions" className="outline-none focus:ring-0">
+                   <TransactionHistory transactions={processedPortfolio.transactions || []} />
                 </TabsContent>
               </AnimatePresence>
             </div>
@@ -175,6 +194,8 @@ export default function Dashboard() {
   );
 }
 
+/** * Kleine helper component voor de navigatie knoppen
+ */
 function NavTrigger({ value, icon: Icon, label }: { value: string, icon: any, label: string }) {
   return (
     <TabsTrigger 
