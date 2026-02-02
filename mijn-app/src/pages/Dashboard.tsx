@@ -26,24 +26,23 @@ import SandboxTab from "@/components/dashboard/SandboxTab";
 import CalculationsTab from "@/components/dashboard/CalculationsTab";
 import AssetClassDetail from "@/components/dashboard/AssetClassDetail";
 import FutExTab from "@/components/dashboard/FutExTab"; 
-import PortfolioEditor from "../components/dashboard/PortfolioEditor";
+import PortfolioEditor, { DEFAULT_PORTFOLIO } from "../components/dashboard/PortfolioEditor";
 
 export type FutExInputs = Record<string, number>;
 
 export default function Dashboard() {
   const [selectedAssetClass, setSelectedAssetClass] = useState<any>(null);
 
-  // 1. LOKALE PORTEFEUILLE STATE (Source of Truth)
+  // 1. LOKALE PORTEFEUILLE STATE
   const [myAssets, setMyAssets] = useState<any[]>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("fin_dash_assets");
-      // Fallback naar een lege array als er niets is opgeslagen
-      return saved ? JSON.parse(saved) : [];
+      // Als er niets in localStorage staat, gebruiken we de DEFAULT_PORTFOLIO
+      return saved ? JSON.parse(saved) : DEFAULT_PORTFOLIO;
     }
-    return [];
+    return DEFAULT_PORTFOLIO;
   });
 
-  // Bij elke wijziging in de assets slaan we deze op
   useEffect(() => {
     localStorage.setItem("fin_dash_assets", JSON.stringify(myAssets));
   }, [myAssets]);
@@ -52,60 +51,56 @@ export default function Dashboard() {
     Equity: 7.5, FixedIncome: 3.0, Crypto: 15.0, Commodities: 4.0, Cash: 2.0
   });
 
-  // 2. LIVE DATA FETCHING (Verbonden met je Node.js server op poort 5000)
+  // 2. LIVE DATA FETCHING
   const { data: livePriceData, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["livePrices", myAssets.map(a => a.ticker)],
     queryFn: async () => {
-  // Filter lege tickers eruit voordat we de server aanroepen
-  const validTickers = myAssets
-    .map(a => a.ticker)
-    .filter(t => t && t.trim() !== "");
+      const validTickers = myAssets
+        .map(a => a.ticker)
+        .filter(t => t && t.trim() !== "");
 
-  if (validTickers.length === 0) return {};
-  
-  const symbols = validTickers.join(',');
-  const response = await fetch(`http://localhost:5000/api/prices?symbols=${symbols}`);
-  
-  if (!response.ok) throw new Error("Backend server niet bereikbaar");
-  return response.json();
-},
+      if (validTickers.length === 0) return {};
+      
+      const symbols = validTickers.join(',');
+      const response = await fetch(`http://localhost:5000/api/prices?symbols=${symbols}`);
+      
+      if (!response.ok) throw new Error("Backend server niet bereikbaar");
+      return response.json();
+    },
     enabled: myAssets.length > 0,
-    refetchInterval: 30000, // Elke 30 seconden een verse prijs-feed
+    refetchInterval: 30000, 
   });
 
   // 3. ENGINE CALCULATIONS
-const processedPortfolio = useMemo(() => {
-  if (myAssets.length === 0) return null;
+  const processedPortfolio = useMemo(() => {
+    if (!myAssets || myAssets.length === 0) return null;
 
-  const rawPortfolio = {
-    name: "Main Terminal",
-    assets: myAssets.map(asset => {
-      // VEILIGHEIDSCHECK: Zorg dat ticker altijd een string is
-      const ticker = asset?.ticker ? String(asset.ticker).toUpperCase() : "";
-      
-      // Haal de prijs op, maar wees voorbereid op een lege ticker
-      const currentLivePrice = (ticker && livePriceData?.[ticker]) || asset.price || 0;
-      
-      return {
-        ...asset,
-        ticker: ticker, // Consistentie
-        symbol: ticker, // Voor de engine
-        price: currentLivePrice,
-        value: currentLivePrice * (asset.amount || 0)* (Number(asset.amount) || 0),
-        historicalPrices: {
-          lastClose: currentLivePrice * 0.99,
-          monthAgo: currentLivePrice * 0.92,
-          yearAgo: currentLivePrice * 0.85
-        }
-      };
-    })
-  };
+    const rawPortfolio = {
+      name: "Main Terminal",
+      assets: myAssets.map(asset => {
+        const ticker = asset?.ticker ? String(asset.ticker).toUpperCase() : "";
+        const currentLivePrice = (ticker && livePriceData?.[ticker]) || asset.price || 0;
+        
+        return {
+          ...asset,
+          ticker: ticker,
+          symbol: ticker,
+          price: currentLivePrice,
+          // FIX: Hier stond dubbele vermenigvuldiging in je tekst, nu gecorrigeerd:
+          value: currentLivePrice * (Number(asset.amount) || 0),
+          historicalPrices: {
+            lastClose: currentLivePrice * 0.99,
+            monthAgo: currentLivePrice * 0.92,
+            yearAgo: currentLivePrice * 0.85
+          }
+        };
+      })
+    };
 
-  return processPortfolioData(rawPortfolio as any, futExInputs);
-}, [livePriceData, myAssets, futExInputs]);
+    return processPortfolioData(rawPortfolio as any, futExInputs);
+  }, [livePriceData, myAssets, futExInputs]);
 
-  // Loading state voor de initiële fetch
-  if (isLoading && myAssets.length > 0) {
+  if (isLoading && myAssets.length > 0 && !livePriceData) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-10">
         <div className="max-w-7xl w-full space-y-8 text-center">
@@ -121,7 +116,6 @@ const processedPortfolio = useMemo(() => {
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-200 font-sans">
-      {/* Background Ambience */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-24 -left-24 w-96 h-96 bg-blue-600/10 rounded-full blur-[120px]" />
         <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-indigo-600/5 rounded-full blur-[150px]" />
@@ -130,7 +124,6 @@ const processedPortfolio = useMemo(() => {
       <div className="relative z-10 p-6 md:p-10">
         <div className="max-w-7xl mx-auto space-y-8">
           
-          {/* Header Section */}
           <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-800/50 pb-8">
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
               <div className="flex items-center gap-2 mb-3">
@@ -193,7 +186,6 @@ const processedPortfolio = useMemo(() => {
                     initialAssets={myAssets} 
                     onSave={(updatedAssets: any[]) => {
                       setMyAssets(updatedAssets);
-                      // Onmiddellijk prijzen verversen na het committen
                       setTimeout(() => refetch(), 100);
                     }} 
                   />
@@ -239,16 +231,14 @@ const processedPortfolio = useMemo(() => {
                 </TabsContent>
 
                 <TabsContent key="transactions-tab" value="transactions" className="outline-none">
-   {/* We voegen een fallback [] toe zodat de code niet crasht als transactions ontbreekt */}
-   <TransactionHistory transactions={(processedPortfolio as any)?.transactions || []} />
-</TabsContent>
+                  <TransactionHistory transactions={(processedPortfolio as any)?.transactions || []} />
+                </TabsContent>
               </AnimatePresence>
             </div>
           </Tabs>
         </div>
       </div>
 
-      {/* Detail Overlay */}
       {selectedAssetClass && (
         <AssetClassDetail 
           assetClass={selectedAssetClass} 
@@ -259,7 +249,6 @@ const processedPortfolio = useMemo(() => {
   );
 }
 
-// Hulpschermen & Navigatie
 function EmptyState() {
   return (
     <div className="h-96 flex flex-col items-center justify-center border-2 border-dashed border-slate-800 rounded-[3rem] bg-slate-900/20 backdrop-blur-sm">
