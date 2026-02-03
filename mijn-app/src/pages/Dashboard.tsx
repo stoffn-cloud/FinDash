@@ -7,9 +7,10 @@ import {
   LayoutDashboard,
   PieChart as PieChartIcon,
   History,
-  BarChart3,
+  Landmark,
   Calendar,
   Layers,
+  Grid3X3,
   Calculator,
   ChevronDown,
   ExternalLink,
@@ -34,6 +35,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import DashboardContent from "@/components/dashboard/DashboardContent";
 import AssetClassDetail from "@/components/dashboard/AssetClassDetail";
 import RiskTab from "@/components/dashboard/RiskTab";
+import StrategyTab from "@/components/dashboard/StrategyTab";
+import CalculationsTab from "@/components/dashboard/CalculationsTab";
+import CorrelationsTab from "@/components/dashboard/CorrelationsTab";
 
 import { mockPortfolio } from "@/app/api/mockData";
 import type { Portfolio, AssetClass } from "@/types/dashboard";
@@ -84,7 +88,7 @@ export default function Dashboard() {
             <nav className="hidden lg:flex items-center gap-1">
               {[
                 { label: "Dashboard", icon: LayoutDashboard, active: true },
-                { label: "Markets", icon: BarChart3 },
+                { label: "Markets", icon: Landmark },
                 { label: "Portfolio", icon: PieChartIcon },
                 { label: "Strategy", icon: Zap }
               ].map((item) => (
@@ -177,8 +181,9 @@ export default function Dashboard() {
     { id: "Overview", icon: LayoutDashboard, tooltip: "Overview" },
     { id: "Asset Classes", icon: PieChartIcon, tooltip: "Asset Classes" },
     { id: "Risk", icon: ShieldAlert, tooltip: "Risk Analytics" },
+    { id: "Correlations", icon: Grid3X3, tooltip: "Correlation Matrix" },
     { id: "History", icon: History, tooltip: "Transaction History" },
-    { id: "Markets", icon: BarChart3, tooltip: "Markets Analysis" },
+    { id: "Markets", icon: Landmark, tooltip: "Markets Analysis" },
     { id: "Calendar", icon: Calendar, tooltip: "Economic Calendar" },
     { id: "Strategy", icon: Zap, tooltip: "Strategy Builder" },
     { id: "Calculator", icon: Calculator, tooltip: "Monte Carlo Sim" }
@@ -221,89 +226,119 @@ export default function Dashboard() {
   ))}
 </aside>
 
-        {/* Main Content Area */}
+{/* MAIN CONTENT AREA */}
 <main className="flex-1 p-4 lg:p-8 min-w-0">
   <div className="max-w-6xl mx-auto space-y-8">
     
-{/* --- GECENTRALISEERDE HEADER --- */}
-<div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-800/40 pb-6 mb-8">
-  <div>
-    <h1 className="text-4xl font-extrabold text-white tracking-tight">
-      {activeTab === "Overview" && "Portfolio Dashboard"}
-      {activeTab === "Asset Classes" && "Asset Allocation"}
-      {activeTab === "Risk" && "Risk Management"}
-      {activeTab === "Markets" && "Markets Analysis"}
-      {activeTab === "Calendar" && "Economic Scheduler"}
-      {activeTab === "Strategy" && "Portfolio Editor"}
-      {activeTab === "History" && "Transaction History"}
-      {activeTab === "Calculator" && "Risk Analysis"}
-    </h1>
-  </div>
+{/* --- Centralized Header --- */}
+  <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-800/40 pb-6 mb-8">
+    <div>
+      <h1 className="text-4xl font-extrabold text-white tracking-tight">
+        {activeTab === "Overview" && "Portfolio Dashboard"}
+        {activeTab === "Asset Classes" && "Asset Allocation"}
+        {activeTab === "Risk" && "Risk Management"}
+        {activeTab === "Correlations" && "Correlation Matrix"}
+        {activeTab === "Markets" && "Markets Analysis"}
+        {activeTab === "Calendar" && "Economic Scheduler"}
+        {activeTab === "Strategy" && "strategy builder"}
+        {activeTab === "History" && "Transaction History"}
+        {activeTab === "Calculator" && "Calculator Module"}
+        {activeTab === "Editor" && "Portfolio Editor"}
+      </h1>
+    </div>
 
-  <div className="flex items-center gap-2 mb-1"> {/* mb-1 lijnt ze mooi uit met de onderkant van de tekst */}
-    <Button 
-      variant="outline" 
-      size="sm" 
-      onClick={handleRefetch}
-      disabled={isFetching}
-      className="bg-slate-950/50 border-slate-800 text-slate-400 h-9 px-3 hover:text-white rounded-lg transition-all"
-    >
-      <RefreshCcw className={cn("w-3.5 h-3.5 mr-2", isFetching && "animate-spin")} /> 
-      Sync
-    </Button>
+    <div className="flex items-center gap-2 mb-1"> {/* mb-1 lijnt ze mooi uit met de onderkant van de tekst */}
+      <Button 
+        variant="outline" 
+        size="sm" 
+        onClick={handleRefetch}
+        disabled={isFetching}
+        className="bg-slate-950/50 border-slate-800 text-slate-400 h-9 px-3 hover:text-white rounded-lg transition-all"
+      >
+        <RefreshCcw className={cn("w-3.5 h-3.5 mr-2", isFetching && "animate-spin")} /> 
+        Sync
+      </Button>
     
     <Button 
       size="sm" 
       className="bg-blue-600 hover:bg-blue-500 text-white h-9 shadow-md shadow-blue-500/20 px-4 font-bold rounded-lg transition-all hover:scale-105 active:scale-95 text-xs"
-      onClick={() => handleAssetClick({ id: 'new', name: 'New Asset' } as any)} 
-    >
-      <Plus className="w-4 h-4 mr-1.5" /> Asset Toevoegen
+      onClick={() => handleAssetClick({ id: 'new', name: '' } as any)} 
+       >
+     <Plus className="w-4 h-4 mr-1.5" /> Asset Toevoegen
     </Button>
   </div>
 </div>
 
-    {/* --- CONTENT ZONDER TITELS --- */}
+{/* --- CONTENT ZONDER TITELS --- */}
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+      {/* OVERVIEW TAB */}
       {activeTab === "Overview" && (
         <DashboardContent portfolio={portfolio} onAssetClick={handleAssetClick} showOnly="overview" />
       )}
       
+      {/* ASSET CLASSES TAB */}
       {activeTab === "Asset Classes" && (
         <DashboardContent portfolio={portfolio} onAssetClick={handleAssetClick} showOnly="assets" />
       )}
 
+      {/* RISK TAB */}
       {activeTab === "Risk" && (
         <DashboardContent portfolio={portfolio} onAssetClick={handleAssetClick} showOnly="risk" />
       )}
 
+      {/* CORRELATIONS TAB */}
+      {activeTab === "Correlations" && (
+        <CorrelationsTab portfolio={portfolio} />
+      )}
+
+      {/* MARKETS TAB */}
       {activeTab === "Markets" && (
         <DashboardContent portfolio={portfolio} onAssetClick={handleAssetClick} showOnly="markets" />
       )}
 
+      {/* CALENDAR TAB */}
       {activeTab === "Calendar" && (
         <DashboardContent portfolio={portfolio} onAssetClick={handleAssetClick} showOnly="calendar" />
       )}
 
+      {/* STRATEGY BUILDER TAB */}
       {activeTab === "Strategy" && (
-        <DashboardContent portfolio={portfolio} onAssetClick={handleAssetClick} showOnly="editor" />
+        <StrategyTab portfolio={portfolio} />
       )}
 
-      {/* Fallback voor nog niet geïmplementeerde tabs */}
-      {["History", "Calculator"].includes(activeTab) && (
-        <div className="h-64 flex flex-col items-center justify-center border-2 border-dashed border-slate-800 rounded-[2rem]">
-          <span className="text-slate-600 font-mono text-xs uppercase tracking-widest">Module Under Construction</span>
-        </div>
+      {/* PORTFOLIO EDITOR (Pop-up) */}
+      {activeTab === "Editor" && (
+        <DashboardContent
+          portfolio={portfolio}
+          onAssetClick={handleAssetClick}
+          showOnly="editor" 
+        />
       )}
-    </div>
 
-  </div>
+      {/* TRANSACTION HISTORY TAB */}
+      {activeTab === "History" && (
+       <div className="animate-in fade-in duration-500">
+         {/* Hier kun je eventueel een HistoryTab plaatsen */}
+          <p className="text-slate-500 font-mono text-center py-20">Transaction history module loading...</p>
+       </div>
+      )}
+
+      {/* CALCULATIONS / RISK ANALYSIS TAB */}
+      {activeTab === "Calculator" && (
+       <div className="animate-in fade-in duration-500">
+        <CalculationsTab portfolio={portfolio} />
+       </div>
+     )}
+      </div>
+      </div>
 </main>
       </div>
 
       <AssetClassDetail 
-        assetClass={selectedAssetClass} 
-        onClose={() => setSelectedAssetClass(null)} 
-      />
+  assetClass={selectedAssetClass} 
+  onClose={() => setSelectedAssetClass(null)} 
+  portfolio={portfolio} // Vergeet deze niet!
+/>
 
       <footer className="mt-20 border-t border-slate-900 bg-black/40 py-8">
         <div className="max-w-[1600px] mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-4">

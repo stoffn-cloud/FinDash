@@ -1,15 +1,16 @@
 "use client";
 
+import React from "react";
 import { motion } from "framer-motion";
 import { Grid3X3, AlertCircle, Info } from "lucide-react";
 import CorrelationMatrix from "./CorrelationMatrix";
+import { Portfolio } from "@/types/dashboard"; // Zorg dat dit pad klopt
 
 interface CorrelationsTabProps {
-  assetClasses?: any[];
-  portfolio?: any;
+  portfolio: Portfolio; // Verplicht vanuit Dashboard.tsx
 }
 
-// Statische correlaties (deze zouden in een volgende fase uit een API komen)
+// Statische correlaties (Blijven behouden als engine-fallback)
 const ASSET_CLASS_CORRELATIONS: Record<string, number> = {
   "Equities-Fixed Income": 0.12,
   "Equities-Crypto": 0.45,
@@ -27,36 +28,23 @@ const SECTOR_CORRELATIONS: Record<string, number> = {
   "Utilities-Technology": -0.08,
 };
 
-export default function CorrelationsTab({ assetClasses = [], portfolio = {} }: CorrelationsTabProps) {
+export default function CorrelationsTab({ portfolio }: CorrelationsTabProps) {
   
-  // Haal de namen op van de live asset classes uit de engine
-  const assetClassNames = assetClasses.length > 0
-    ? assetClasses.map(ac => ac.name)
-    : ["Equities", "Fixed Income", "Crypto", "Commodities", "Real Estate"];
+  // Guard voor als portfolio nog laadt
+  if (!portfolio) {
+    return <div className="p-8 text-slate-500 font-mono text-xs animate-pulse uppercase">Syncing Neural Correlation Engine...</div>;
+  }
 
-  // Haal sectoren op (indien aanwezig in de portfolio state)
-  const currentSectors = portfolio.sectors || [];
-  const sectorNames = currentSectors.length > 0
-    ? currentSectors.map((s: any) => s.name)
-    : ["Technology", "Healthcare", "Financials", "Energy", "Utilities"];
+// Haal live asset namen op; als de lijst niet bestaat, gebruik de defaults
+const assetClassNames = portfolio?.assetClasses?.map(ac => ac.name) || 
+  ["Equities", "Fixed Income", "Crypto", "Commodities", "Real Estate"];
+
+// Doe hetzelfde voor de sectoren om ook daar fouten te voorkomen
+const sectorNames = (portfolio as any)?.sectors?.map((s: any) => s.name) || 
+  ["Technology", "Healthcare", "Financials", "Energy", "Utilities"];
 
   return (
-    <div className="space-y-10 pb-16">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        className="flex items-center gap-4"
-      >
-        <div className="p-3 rounded-2xl bg-blue-600/10 border border-blue-600/20 shadow-[0_0_15px_rgba(37,99,235,0.1)]">
-          <Grid3X3 className="w-6 h-6 text-blue-500" />
-        </div>
-        <div>
-          <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter">Systemic Correlations</h2>
-          <p className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.2em]">Historical Rolling 12-Month Coefficient Analysis</p>
-        </div>
-      </motion.div>
-
+    <div className="space-y-10 pb-16 animate-in fade-in duration-700">
       {/* Warning/Info Box */}
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
@@ -73,8 +61,6 @@ export default function CorrelationsTab({ assetClasses = [], portfolio = {} }: C
           </p>
         </div>
       </motion.div>
-
-      
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
         {/* Macro Matrix */}
@@ -111,7 +97,7 @@ export default function CorrelationsTab({ assetClasses = [], portfolio = {} }: C
         <div className="px-6 py-2 rounded-full bg-white/[0.02] border border-white/5 flex items-center gap-3">
           <Info className="w-3 h-3 text-slate-600" />
           <span className="text-[9px] font-mono text-slate-600 uppercase tracking-[0.1em]">
-            System status: <span className="text-emerald-500">All Correlation Engines Nominal</span>
+            System status: <span className="text-emerald-500 font-bold tracking-normal">All Correlation Engines Nominal</span>
           </span>
         </div>
       </div>

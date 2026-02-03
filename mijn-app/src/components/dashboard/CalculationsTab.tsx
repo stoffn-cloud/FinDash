@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Calculator, TrendingUp, Info, ArrowRight } from "lucide-react";
+import { Calculator, TrendingUp, Info, ArrowRight, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +15,12 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { Portfolio } from "@/types/dashboard"; // Zorg dat dit pad klopt
+
+// --- TYPES ---
+interface CalculationsTabProps {
+  portfolio: Portfolio; // Dit lost de error in Dashboard.tsx op
+}
 
 type BondInputs = {
   faceValue: number;
@@ -32,7 +38,8 @@ type YTMResult = {
   currentYield: number;
 };
 
-export default function CalculationsTab() {
+export default function CalculationsTab({ portfolio }: CalculationsTabProps) {
+  // We kunnen nu 'portfolio' gebruiken voor contextuele berekeningen indien nodig
   const [bondInputs, setBondInputs] = useState<BondInputs>({
     faceValue: 1000,
     currentPrice: 950,
@@ -100,18 +107,28 @@ export default function CalculationsTab() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      <div className="flex items-center gap-4 mb-8">
-        <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.1)]">
-          <Calculator className="w-6 h-6 text-amber-500" />
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-4">
+          <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.1)]">
+            <Calculator className="w-6 h-6 text-amber-500" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter">Fixed Income Terminal</h2>
+            <p className="text-xs font-mono text-slate-500 uppercase tracking-widest">Bond Analytics & Yield Projections</p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter">Fixed Income Terminal</h2>
-          <p className="text-xs font-mono text-slate-500 uppercase tracking-widest">Bond Analytics & Yield Projections</p>
-        </div>
-      </div>
-
+        
+        {/* Portfolio Context Badge */}
+<div className="hidden md:flex items-center gap-2 px-4 py-2 bg-slate-900/50 border border-white/5 rounded-xl">
+  <ShieldCheck className="w-4 h-4 text-emerald-500" />
+  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+    {/* Gebruik ?. en ?? 0 om veilig de lengte te tonen */}
+    Universe: {portfolio?.assetClasses?.length ?? 0} Nodes Active
+  </span>
+</div>
+</div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Input Card */}
+        {/* --- INPUT CARD (Blijft grotendeels gelijk, styling verfijnd) --- */}
         <div className="rounded-3xl bg-black/20 border border-white/5 p-8 backdrop-blur-xl shadow-2xl">
           <div className="flex items-center gap-3 mb-8">
             <TrendingUp className="w-4 h-4 text-blue-400" />
@@ -126,7 +143,7 @@ export default function CalculationsTab() {
                   type="number"
                   value={bondInputs.faceValue}
                   onChange={(e) => updateInput("faceValue", e.target.value)}
-                  className="bg-slate-900/50 border-white/5 text-white font-mono focus:border-blue-500/50 transition-all rounded-xl"
+                  className="bg-slate-900/40 border-white/5 text-white font-mono focus:ring-1 focus:ring-blue-500/50 transition-all rounded-xl"
                 />
               </div>
               <div className="space-y-2">
@@ -135,7 +152,7 @@ export default function CalculationsTab() {
                   type="number"
                   value={bondInputs.currentPrice}
                   onChange={(e) => updateInput("currentPrice", e.target.value)}
-                  className="bg-slate-900/50 border-white/5 text-white font-mono focus:border-blue-500/50 transition-all rounded-xl"
+                  className="bg-slate-900/40 border-white/5 text-white font-mono focus:ring-1 focus:ring-blue-500/50 transition-all rounded-xl"
                 />
               </div>
             </div>
@@ -148,7 +165,7 @@ export default function CalculationsTab() {
                   step="0.1"
                   value={bondInputs.couponRate}
                   onChange={(e) => updateInput("couponRate", e.target.value)}
-                  className="bg-slate-900/50 border-white/5 text-white font-mono focus:border-blue-500/50 transition-all rounded-xl"
+                  className="bg-slate-900/40 border-white/5 text-white font-mono rounded-xl"
                 />
               </div>
               <div className="space-y-2">
@@ -157,7 +174,7 @@ export default function CalculationsTab() {
                   type="number"
                   value={bondInputs.yearsToMaturity}
                   onChange={(e) => updateInput("yearsToMaturity", e.target.value)}
-                  className="bg-slate-900/50 border-white/5 text-white font-mono focus:border-blue-500/50 transition-all rounded-xl"
+                  className="bg-slate-900/40 border-white/5 text-white font-mono rounded-xl"
                 />
               </div>
             </div>
@@ -168,7 +185,7 @@ export default function CalculationsTab() {
                 value={bondInputs.paymentFrequency.toString()}
                 onValueChange={(v) => updateInput("paymentFrequency", Number(v))}
               >
-                <SelectTrigger className="bg-slate-900/50 border-white/5 text-white font-mono rounded-xl">
+                <SelectTrigger className="bg-slate-900/40 border-white/5 text-white font-mono rounded-xl">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-slate-900 border-white/10 text-white font-mono">
@@ -184,12 +201,12 @@ export default function CalculationsTab() {
               onClick={calculateYTM}
               className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-widest py-6 rounded-xl shadow-lg shadow-blue-600/20 transition-all group"
             >
-              Run Calculation <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+              Compute Yield <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
             </Button>
           </div>
         </div>
 
-        {/* Output Card */}
+        {/* --- OUTPUT CARD (Blijft grotendeels gelijk) --- */}
         <div className="rounded-3xl bg-black/20 border border-white/5 p-8 backdrop-blur-xl relative overflow-hidden flex flex-col justify-center">
           <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-8">Analysis Output</h3>
 
@@ -197,10 +214,10 @@ export default function CalculationsTab() {
             <div className="space-y-8">
               <div className="bg-blue-500/5 rounded-2xl p-6 border border-blue-500/10">
                 <p className="text-[10px] text-blue-400 uppercase font-black tracking-widest mb-2">Yield to Maturity</p>
-                <p className="text-5xl font-black text-white font-mono italic">{ytmResult.ytm.toFixed(3)}%</p>
+                <p className="text-5xl font-black text-white font-mono italic tracking-tighter">{ytmResult.ytm.toFixed(3)}%</p>
                 <div className="mt-4 flex items-center gap-2 text-[10px] text-slate-500 uppercase font-bold">
                   <Info className="w-3 h-3 text-blue-500" />
-                  Annualized effective return
+                  Internal Rate of Return (IRR)
                 </div>
               </div>
 
@@ -212,13 +229,13 @@ export default function CalculationsTab() {
                 <div className="bg-white/[0.02] p-5 rounded-2xl border border-white/5">
                   <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-2">Gain/Loss</p>
                   <p className={cn("text-xl font-black font-mono", ytmResult.capitalGainLoss >= 0 ? "text-emerald-400" : "text-rose-400")}>
-                    ${ytmResult.capitalGainLoss.toFixed(2)}
+                    ${Math.abs(ytmResult.capitalGainLoss).toFixed(2)}
                   </p>
                 </div>
               </div>
 
               <div className="pt-6 border-t border-white/5 flex justify-between items-center">
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Pricing Status</span>
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Market Pricing</span>
                 <Badge
                   className={cn(
                     "px-4 py-1.5 rounded-lg font-black uppercase text-[10px] tracking-widest border-none",
@@ -230,17 +247,17 @@ export default function CalculationsTab() {
                   )}
                 >
                   {bondInputs.currentPrice < bondInputs.faceValue
-                    ? "DISCOUNT"
+                    ? "TRADING AT DISCOUNT"
                     : bondInputs.currentPrice > bondInputs.faceValue
-                    ? "PREMIUM"
-                    : "AT PAR"}
+                    ? "TRADING AT PREMIUM"
+                    : "TRADING AT PAR"}
                 </Badge>
               </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center h-64 text-slate-600 border border-dashed border-white/5 rounded-3xl">
+            <div className="flex flex-col items-center justify-center h-64 text-slate-600 border border-dashed border-white/5 rounded-3xl bg-slate-900/10">
               <Calculator className="w-12 h-12 mb-4 opacity-10" />
-              <p className="text-[10px] font-black uppercase tracking-widest opacity-50">Input Parameters to Initialize</p>
+              <p className="text-[10px] font-black uppercase tracking-widest opacity-50">Execute to Reveal Analytics</p>
             </div>
           )}
         </div>
