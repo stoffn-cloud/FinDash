@@ -1,16 +1,14 @@
+"use client";
+
 import { 
-  TrendingUp,
   TrendingDown,
   Info,
-  Calendar,
   Globe,
   Zap
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -53,6 +51,7 @@ const CustomYieldTooltip = ({ active, payload }: any) => {
 export default function MarketsTab() {
   return (
     <div className="space-y-6">
+      {/* 1. TOP METRICS GRID */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         {[
           { label: "Fed Funds Rate", value: "5.50%", change: "Unchanged", status: "Neutral", icon: Zap },
@@ -76,99 +75,58 @@ export default function MarketsTab() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 bg-slate-900/40 border-slate-800">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-white text-base flex items-center gap-2">
-                US Treasury Yield Curve
-                <Info className="w-3 h-3 text-slate-500" />
-              </CardTitle>
-              <CardDescription className="text-slate-500 text-xs">Current Market Yields vs 1 Month Ago</CardDescription>
-            </div>
-            <div className="flex gap-2">
-              <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-blue-500" />
-                <span className="text-[10px] text-slate-400">Current</span>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="h-[280px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={yieldCurveData}>
-                <defs>
-                  <linearGradient id="colorYield" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
-                <XAxis
-                  dataKey="period"
-                  stroke="#475569"
-                  fontSize={10}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  stroke="#475569"
-                  fontSize={10}
-                  axisLine={false}
-                  tickLine={false}
-                  domain={[3.5, 6]}
-                />
-                <Tooltip content={<CustomYieldTooltip />} />
-                <Area
-                  type="monotone"
-                  dataKey="yield"
-                  stroke="#3b82f6"
-                  strokeWidth={2}
-                  fillOpacity={1}
-                  fill="url(#colorYield)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-slate-900/40 border-slate-800">
-          <CardHeader>
-            <CardTitle className="text-white text-base">Economic Calendar</CardTitle>
-            <CardDescription className="text-xs">Next 48 Hours</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {[
-                { event: "Initial Jobless Claims", time: "14:30", impact: "High", country: "US" },
-                { event: "Retail Sales MoM", time: "14:30", impact: "High", country: "US" },
-                { event: "Industrial Production", time: "15:15", impact: "Medium", country: "US" },
-                { event: "Michigan Consumer Sentiment", time: "16:00", impact: "Medium", country: "US" }
-              ].map((item, i) => (
-                <div key={i} className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-800/50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="flex flex-col items-center justify-center w-8 h-8 rounded border border-slate-700 bg-slate-900">
-                      <span className="text-[10px] text-slate-500 uppercase">{item.country}</span>
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-white">{item.event}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <Calendar className="w-3 h-3 text-slate-500" />
-                        <span className="text-[10px] text-slate-500">{item.time}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <Badge className={cn(
-                    "text-[8px] px-1.5 py-0",
-                    item.impact === "High" ? "bg-rose-500/10 text-rose-500 border-rose-500/20" : "bg-blue-500/10 text-blue-500 border-blue-500/20"
-                  )}>
-                    {item.impact}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* 2. MAIN YIELD CURVE (Nu over de volledige breedte) */}
+      <Card className="bg-slate-900/40 border-slate-800">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-white text-base flex items-center gap-2">
+              US Treasury Yield Curve
+              <Info className="w-3 h-3 text-slate-500" />
+            </CardTitle>
+            <CardDescription className="text-slate-500 text-xs">Current Market Yields vs 1 Month Ago</CardDescription>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+            <span className="text-[10px] text-slate-400 font-mono">Live Node Data</span>
+          </div>
+        </CardHeader>
+        <CardContent className="h-[400px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={yieldCurveData}>
+              <defs>
+                <linearGradient id="colorYield" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
+              <XAxis
+                dataKey="period"
+                stroke="#475569"
+                fontSize={10}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                stroke="#475569"
+                fontSize={10}
+                axisLine={false}
+                tickLine={false}
+                domain={[3.5, 6]}
+              />
+              <Tooltip content={<CustomYieldTooltip />} />
+              <Area
+                type="monotone"
+                dataKey="yield"
+                stroke="#3b82f6"
+                strokeWidth={2}
+                fillOpacity={1}
+                fill="url(#colorYield)"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
     </div>
   );
 }

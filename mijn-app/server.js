@@ -2,39 +2,39 @@ import express from 'express';
 import cors from 'cors';
 import yahooFinance from 'yahoo-finance2';
 
-const app = express(); // <--- Deze MOET eerst komen!
+const app = express();
 const port = 5000;
 
 // 1. CORS Configuratie
+// Zorg dat deze exact overeenkomt met je frontend poort
 const corsOptions = {
-  origin: 'http://localhost:5173', // Jouw Vite frontend
-  methods: ['GET', 'POST'],
+  origin: 'http://localhost:5173', 
+  methods: ['GET', 'POST', 'OPTIONS'],
   credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization']
 };
 
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// 2. Route voor prijzen (gebruikt door Dashboard overview)
+// 2. Route voor prijzen
 app.get('/api/prices', async (req, res) => {
   try {
     const { symbols } = req.query;
     if (!symbols) return res.json({});
 
-    const symbolArray = symbols.split(',').filter(s => s.trim() !== "");
+    const symbolArray = String(symbols).split(',').map(s => s.trim()).filter(Boolean);
     if (symbolArray.length === 0) return res.json({});
 
     const results = {};
-    
-    // We halen de quotes op
     const quotes = await Promise.all(
       symbolArray.map(symbol => 
-        yahooFinance.quote(symbol).catch(err => ({ symbol, regularMarketPrice: 0 }))
+        yahooFinance.quote(symbol).catch(() => null)
       )
     );
 
     quotes.forEach(quote => {
-      if (quote) {
+      if (quote && quote.symbol) {
         results[quote.symbol] = quote.regularMarketPrice;
       }
     });
@@ -46,15 +46,14 @@ app.get('/api/prices', async (req, res) => {
   }
 });
 
-// 3. Route voor zoeken (gebruikt door PortfolioEditor)
+// 3. Route voor zoeken
 app.get('/api/search', async (req, res) => {
   try {
     const query = req.query.q;
     if (!query || query.length < 2) return res.json([]);
 
-    const result = await yahooFinance.search(query);
+    const result = await yahooFinance.search(String(query));
     const suggestions = result.quotes
-      .filter(quote => quote.isYahooFinance) // Alleen echte assets
       .map(quote => ({
         ticker: quote.symbol,
         name: quote.longname || quote.shortname,
@@ -68,6 +67,7 @@ app.get('/api/search', async (req, res) => {
   }
 });
 
+// 4. Server Start
 app.listen(port, () => {
   console.log(`🚀 QUANT BACKEND ACTIEF OP POORT ${port}`);
 });

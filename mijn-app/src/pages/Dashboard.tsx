@@ -15,7 +15,9 @@ import {
   ExternalLink,
   ShieldCheck,
   Zap,
-  RefreshCcw
+  RefreshCcw,
+  ShieldAlert,
+  Plus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,10 +30,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
 import DashboardContent from "@/components/dashboard/DashboardContent";
 import AssetClassDetail from "@/components/dashboard/AssetClassDetail";
+import RiskTab from "@/components/dashboard/RiskTab";
+
 import { mockPortfolio } from "@/app/api/mockData";
 import type { Portfolio, AssetClass } from "@/types/dashboard";
+
+import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 export default function Dashboard() {
   const [selectedAssetClass, setSelectedAssetClass] = useState<AssetClass | null>(null);
@@ -47,6 +55,8 @@ export default function Dashboard() {
   const handleAssetClick = (asset: AssetClass) => {
     setSelectedAssetClass(asset);
   };
+
+  const [activeTab, setActiveTab] = useState("Overview");
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-200 selection:bg-blue-500/30">
@@ -163,45 +173,131 @@ export default function Dashboard() {
       <div className="flex max-w-[1600px] mx-auto">
         {/* Secondary Sidebar (Navigation Icons) */}
         <aside className="hidden md:flex flex-col items-center py-6 gap-6 w-16 border-r border-slate-800/40">
-          {[
-            { icon: LayoutDashboard, tooltip: "Overview" },
-            { icon: PieChartIcon, tooltip: "Asset Classes" },
-            { icon: History, tooltip: "Transaction History" },
-            { icon: BarChart3, tooltip: "Markets Analysis" },
-            { icon: Calendar, tooltip: "Economic Calendar" },
-            { icon: Layers, tooltip: "Strategy Builder" },
-            { icon: Calculator, tooltip: "Monte Carlo Sim" }
-          ].map((item, i) => (
-            <TooltipProvider key={i}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-500 hover:text-white hover:bg-slate-900 group">
-                    <item.icon className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="right">{item.tooltip}</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          ))}
-        </aside>
+  {[
+    { id: "Overview", icon: LayoutDashboard, tooltip: "Overview" },
+    { id: "Asset Classes", icon: PieChartIcon, tooltip: "Asset Classes" },
+    { id: "Risk", icon: ShieldAlert, tooltip: "Risk Analytics" },
+    { id: "History", icon: History, tooltip: "Transaction History" },
+    { id: "Markets", icon: BarChart3, tooltip: "Markets Analysis" },
+    { id: "Calendar", icon: Calendar, tooltip: "Economic Calendar" },
+    { id: "Strategy", icon: Zap, tooltip: "Strategy Builder" },
+    { id: "Calculator", icon: Calculator, tooltip: "Monte Carlo Sim" }
+  ].map((item, i) => (
+    <TooltipProvider key={i}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            // Verandert de actieve tab en stuurt de 'main' aan
+            onClick={() => setActiveTab(item.id)}
+            className={`h-10 w-10 transition-all duration-300 group relative ${
+              activeTab === item.id 
+                ? 'text-blue-400 bg-blue-500/10 border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.2)]' 
+                : 'text-slate-500 hover:text-slate-200 hover:bg-slate-900'
+            }`}
+          >
+            <item.icon className={cn(
+              "w-5 h-5 transition-transform duration-300 group-hover:scale-110",
+              activeTab === item.id && "scale-110"
+            )} />
+            
+            {/* Actieve Indicator (het blauwe streepje links) */}
+            {activeTab === item.id && (
+              <motion.div 
+                layoutId="activeSideTab"
+                className="absolute left-0 w-0.5 h-6 bg-blue-500 rounded-r-full"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              />
+            )}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="right" className="bg-slate-950 border-slate-800 text-[10px] font-bold uppercase tracking-widest text-blue-400">
+          {item.tooltip}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  ))}
+</aside>
 
-        {/* Dashboard Content */}
-        <main className="flex-1 p-4 lg:p-8 min-w-0">
-          <div className="max-w-6xl mx-auto space-y-8">
-            <div className="flex flex-col gap-1">
-              <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
-                Portfolio Dashboard
-                <ExternalLink className="w-4 h-4 text-slate-600" />
-              </h1>
-              <p className="text-slate-400 text-sm">Real-time overzicht van uw Quantum Alpha strategieën en holdings.</p>
-            </div>
+        {/* Main Content Area */}
+<main className="flex-1 p-4 lg:p-8 min-w-0">
+  <div className="max-w-6xl mx-auto space-y-8">
+    
+{/* --- GECENTRALISEERDE HEADER --- */}
+<div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-800/40 pb-6 mb-8">
+  <div>
+    <h1 className="text-4xl font-extrabold text-white tracking-tight">
+      {activeTab === "Overview" && "Portfolio Dashboard"}
+      {activeTab === "Asset Classes" && "Asset Allocation"}
+      {activeTab === "Risk" && "Risk Management"}
+      {activeTab === "Markets" && "Markets Analysis"}
+      {activeTab === "Calendar" && "Economic Scheduler"}
+      {activeTab === "Strategy" && "Portfolio Editor"}
+      {activeTab === "History" && "Transaction History"}
+      {activeTab === "Calculator" && "Risk Analysis"}
+    </h1>
+  </div>
 
-            <DashboardContent
-              portfolio={portfolio || (mockPortfolio as unknown as Portfolio)}
-              onAssetClick={handleAssetClick}
-            />
-          </div>
-        </main>
+  <div className="flex items-center gap-2 mb-1"> {/* mb-1 lijnt ze mooi uit met de onderkant van de tekst */}
+    <Button 
+      variant="outline" 
+      size="sm" 
+      onClick={handleRefetch}
+      disabled={isFetching}
+      className="bg-slate-950/50 border-slate-800 text-slate-400 h-9 px-3 hover:text-white rounded-lg transition-all"
+    >
+      <RefreshCcw className={cn("w-3.5 h-3.5 mr-2", isFetching && "animate-spin")} /> 
+      Sync
+    </Button>
+    
+    <Button 
+      size="sm" 
+      className="bg-blue-600 hover:bg-blue-500 text-white h-9 shadow-md shadow-blue-500/20 px-4 font-bold rounded-lg transition-all hover:scale-105 active:scale-95 text-xs"
+      onClick={() => handleAssetClick({ id: 'new', name: 'New Asset' } as any)} 
+    >
+      <Plus className="w-4 h-4 mr-1.5" /> Asset Toevoegen
+    </Button>
+  </div>
+</div>
+
+    {/* --- CONTENT ZONDER TITELS --- */}
+    <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+      {activeTab === "Overview" && (
+        <DashboardContent portfolio={portfolio} onAssetClick={handleAssetClick} showOnly="overview" />
+      )}
+      
+      {activeTab === "Asset Classes" && (
+        <DashboardContent portfolio={portfolio} onAssetClick={handleAssetClick} showOnly="assets" />
+      )}
+
+      {activeTab === "Risk" && (
+        <DashboardContent portfolio={portfolio} onAssetClick={handleAssetClick} showOnly="risk" />
+      )}
+
+      {activeTab === "Markets" && (
+        <DashboardContent portfolio={portfolio} onAssetClick={handleAssetClick} showOnly="markets" />
+      )}
+
+      {activeTab === "Calendar" && (
+        <DashboardContent portfolio={portfolio} onAssetClick={handleAssetClick} showOnly="calendar" />
+      )}
+
+      {activeTab === "Strategy" && (
+        <DashboardContent portfolio={portfolio} onAssetClick={handleAssetClick} showOnly="editor" />
+      )}
+
+      {/* Fallback voor nog niet geïmplementeerde tabs */}
+      {["History", "Calculator"].includes(activeTab) && (
+        <div className="h-64 flex flex-col items-center justify-center border-2 border-dashed border-slate-800 rounded-[2rem]">
+          <span className="text-slate-600 font-mono text-xs uppercase tracking-widest">Module Under Construction</span>
+        </div>
+      )}
+    </div>
+
+  </div>
+</main>
       </div>
 
       <AssetClassDetail 
