@@ -9,6 +9,7 @@ export const HoldingSchema = z.object({
   volatility: z.number().optional(),
   region: z.string().optional(),
   country: z.string().optional(),
+  sector: z.string().optional(),
 });
 
 export const AssetClassSchema = z.object({
@@ -26,6 +27,8 @@ export const RiskMetricsSchema = z.object({
   beta: z.number().optional().default(1),
   maxDrawdown: z.number().optional().default(0),
   volatility: z.number().optional().default(0),
+  sharpeRatio: z.number().optional(),
+  var95: z.number().optional(),
 });
 
 export const PerformancePointSchema = z.object({
