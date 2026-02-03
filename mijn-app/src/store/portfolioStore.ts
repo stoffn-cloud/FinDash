@@ -1,4 +1,3 @@
-// src/store/portfolioStore.ts
 import { useState, useEffect } from "react";
 import { mockPortfolio } from "../data/constants/mockPortfolio";
 import { Portfolio } from "../types/schemas"; // Oplossing voor error 2304
