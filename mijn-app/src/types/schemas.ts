@@ -1,10 +1,13 @@
+import { Weight } from "lucide-react";
 import { z } from "zod";
 
 export const HoldingSchema = z.object({
   name: z.string(),
   ticker: z.string(),
-  weight: z.number(),
+  quantity: z.number(), // Verplicht: hoeveel stuks heb je?
+  price: z.number(), // Verplicht: wat is de huidige koers?
   value: z.number(),
+  weight: z.number(),
   return_ytd: z.number().optional(),
   volatility: z.number().optional(),
   region: z.string().optional(),
@@ -60,6 +63,7 @@ export const TransactionSchema = z.object({
 });
 
 export const PortfolioSchema = z.object({
+  id: z.string(),
   name: z.string(),
   totalValue: z.number(),
   dailyChangePercent: z.number().optional().default(0),

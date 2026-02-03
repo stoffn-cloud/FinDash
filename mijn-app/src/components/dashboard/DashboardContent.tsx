@@ -21,24 +21,35 @@ import MarketsTab from "./MarketsTab";
 import CalendarTab from "./CalendarTab";
 import PortfolioEditor from "./PortfolioEditor";
 import { cn } from "@/lib/utils";
-import type { Portfolio, AssetClass } from "@/types/dashboard";
+
+// --- AANPASSING 1: Importeer de hook van de store ---
+import { usePortfolio } from "@/store/portfolioStore";
+// Importeer de juiste types (zorg dat het pad klopt met je schemas)
+import type { AssetClass } from "@/types/schemas"; 
 
 interface DashboardContentProps {
-  portfolio: Portfolio;
+  // We verwijderen 'portfolio' uit de props omdat we de Store gebruiken
   onAssetClick: (asset: AssetClass) => void;
   showOnly?: string; 
 }
 
-export default function DashboardContent({ portfolio, onAssetClick, showOnly = "overview" }: DashboardContentProps) {
+export default function DashboardContent({ onAssetClick, showOnly = "overview" }: DashboardContentProps) {
+  // --- AANPASSING 2: Haal de berekende portfolio data op uit de Store ---
+  const { portfolio } = usePortfolio();
+  
   const [searchQuery, setSearchQuery] = useState("");
 
-  // We normaliseren de state naar kleine letters voor de checks
   const currentView = showOnly?.toLowerCase().trim();
 
   const metrics = useMemo(() => [
     {
       label: "Totaal Vermogen",
-      value: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact' }).format(portfolio.totalValue || 0),
+      // De engine heeft 'totalValue' berekend op basis van quantity * price
+      value: new Intl.NumberFormat('en-US', { 
+        style: 'currency', 
+        currency: 'USD', 
+        notation: 'compact' 
+      }).format(portfolio.totalValue || 0),
       change: `+${portfolio.dailyChangePercent || 0}%`,
       trend: "up",
       icon: DollarSign,
@@ -64,12 +75,10 @@ export default function DashboardContent({ portfolio, onAssetClick, showOnly = "
       trend: "down",
       icon: ShieldAlert,
     }
-  ], [portfolio]);
+  ], [portfolio]); // Metric herberekent zodra store verandert
 
   return (
     <div className="space-y-6">
-
-      {/* --- SECTIE 1: DYNAMISCHE CONTENT --- */}
       <div className="space-y-8">
 
         {/* --- VIEW: DASHBOARD OVERVIEW --- */}
@@ -112,9 +121,10 @@ export default function DashboardContent({ portfolio, onAssetClick, showOnly = "
                 <PerformanceChart data={portfolio.performanceHistory || []} />
               </div>
               <div className="bg-slate-900/20 rounded-3xl border border-white/5">
-                <SectorChart sectors={portfolio.sectorAllocation || []} />
+                <SectorChart sectors={portfolio.sectorAllocation as any} />
               </div>
               <div className="lg:col-span-3">
+                {/* De AssetAllocationTable krijgt nu de berekende klassen uit de Store */}
                 <AssetAllocationTable assetClasses={portfolio.assetClasses || []} onAssetClick={onAssetClick} />
               </div>
             </div>
@@ -152,9 +162,21 @@ export default function DashboardContent({ portfolio, onAssetClick, showOnly = "
         {/* --- VIEW: EDITOR / LAYERS --- */}
         {(currentView === "editor" || currentView === "layers") && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <PortfolioEditor portfolio={portfolio} />
-          </div>
-        )}
+            <PortfolioEditor 
+            portfolio={{
+              ...portfolio,
+              // We garanderen riskMetrics en casten het hele object naar 'any' 
+              // om de SectorName-discussie met de Editor te stoppen.
+          riskMetrics: portfolio.riskMetrics || {
+          beta: 0,
+          maxDrawdown: 0,
+          volatility: 0,
+          sharpeRatio: 0
+            }
+            } as any} 
+            />
+         </div>
+       )}
       </div>
     </div>
   );

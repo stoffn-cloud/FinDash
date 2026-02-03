@@ -1,115 +1,72 @@
 // src/logic/portfolioEngine.ts
-import { calculateHistoricalReturn } from "./ExpectedReturnCalc/HistExpReturn";
-import { calculateFutureReturn } from "./ExpectedReturnCalc/FutExpReturn";
-import { calculatePastReturns } from "./PastReturnCalc/RealizedReturn";
+import { Portfolio, AssetClass, Holding } from "../types/schemas";
 
-// 1. Definieer Types om 'any' te vervangen
-export interface Asset {
-  name: string;
-  assetClass: string;
-  value: number;
-  historicalPrices?: {
-    lastClose?: number;
-    monthAgo?: number;
-    yearAgo?: number;
-  };
-  expertForecast?: number;
-}
+/**
+ * De statische rekenmotor van Quantum Alpha.
+ * Deze functie voert een volledige aggregatie uit van de portfolio:
+ * 1. Bereken de marktwaarde per holding (price * quantity).
+ * 2. Sommeer holdings naar Asset Class niveau.
+ * 3. Bereken het totale portfolio vermogen.
+ * 4. Bereken alle relatieve gewichten (weights) op basis van het nieuwe totaal.
+ */
+export const calculatePortfolioTotals = (rawPortfolio: Portfolio): Portfolio => {
+  // We maken een diepe kopie om de originele mockData (baseline) niet te vervuilen
+  const updatedPortfolio: Portfolio = JSON.parse(JSON.stringify(rawPortfolio));
 
-export interface PortfolioData {
-  name: string;
-  assets: Asset[];
-  [key: string]: any; // Voor overige velden uit de mockData
-}
+  let totalPortfolioValue = 0;
 
-// Helper om rendement te berekenen met type-safety
-const calcPct = (current: number, historical: number | undefined): number => 
-  historical ? ((current - historical) / historical) * 100 : 0;
+  // STAP 1 & 2: Bereken waarden op Holding niveau en aggregeer naar Asset Class
+  updatedPortfolio.assetClasses = updatedPortfolio.assetClasses.map((ac: AssetClass) => {
+    let classTotalValue = 0;
 
-export const processPortfolioData = (
-  rawPortfolio: PortfolioData, 
-  futExInputs: Record<string, number> = {}
-) => {
-  // Check of de data bestaat
-  if (!rawPortfolio || !rawPortfolio.assets) {
-    return null; 
-  }
+    if (ac.holdings && ac.holdings.length > 0) {
+      ac.holdings = ac.holdings.map((h: Holding) => {
+        // Bereken de actuele waarde van de positie
+        const marketValue = h.quantity * h.price;
+        classTotalValue += marketValue;
 
-  try {
-    const assets = rawPortfolio.assets;
-    const totalValue = assets.reduce((sum: number, a: Asset) => sum + a.value, 0);
+        return {
+          ...h,
+          value: marketValue,
+        };
+      });
+    }
 
-    // 1. BEREKENING PER ASSET
-    const processedAssets = assets.map((a: Asset) => {
-      const h = a.historicalPrices || {};
-      return {
-        ...a,
-        returns: {
-          d: calcPct(a.value, h.lastClose),
-          m: calcPct(a.value, h.monthAgo),
-          y: calcPct(a.value, h.yearAgo)
-        }
-      };
-    });
-
-    // 2. BEREKENING PER ASSET CLASS (GEWOGEN)
-    const assetClassNames: string[] = Array.from(new Set(processedAssets.map((a) => a.assetClass)));
+    // Update de totale waarde van de asset class zelf
+    totalPortfolioValue += classTotalValue;
     
-    const performanceByClass = assetClassNames.map(className => {
-      const classAssets = processedAssets.filter((a) => a.assetClass === className);
-      const classValue = classAssets.reduce((sum, a) => sum + a.value, 0);
-      
-      const weightedReturn = (period: 'd' | 'm' | 'y'): number => 
-        classAssets.reduce((acc, a) => {
-          const assetReturn = (a.returns as Record<string, number>)[period];
-          return acc + (assetReturn * (a.value / classValue));
-        }, 0);
-
-      return {
-        className,
-        value: classValue,
-        returns: {
-          d: weightedReturn('d').toFixed(2),
-          m: weightedReturn('m').toFixed(2),
-          y: weightedReturn('y').toFixed(2)
-        }
-      };
-    });
-
-    // 3. PORTFOLIO TOTAAL PERFORMANCE
-    const portfolioReturns = {
-      d: processedAssets.reduce((acc: number, a) => acc + (a.returns.d * (a.value / totalValue)), 0).toFixed(2),
-      m: processedAssets.reduce((acc: number, a) => acc + (a.returns.m * (a.value / totalValue)), 0).toFixed(2),
-      y: processedAssets.reduce((acc: number, a) => acc + (a.returns.y * (a.value / totalValue)), 0).toFixed(2),
+    return {
+      ...ac,
+      current_value: classTotalValue,
     };
+  });
 
-    // 4. EXTERNE CALCULATORS
-    const pastPerformance = calculatePastReturns(assets);
-    const historicalExp = calculateHistoricalReturn(assets);
-    const futureExpRaw = calculateFutureReturn(assets, futExInputs);
+  // STAP 3: Zet het berekende totaal in het portfolio object
+  updatedPortfolio.totalValue = totalPortfolioValue;
+
+  // STAP 4: Bereken de relatieve gewichten (Allocatie %)
+  // Nu we het totaal (totalPortfolioValue) weten, kunnen we de percentages bepalen.
+  updatedPortfolio.assetClasses = updatedPortfolio.assetClasses.map((ac) => {
+    // Allocatie van de klasse t.o.v. het totaal
+    const classAllocation = totalPortfolioValue > 0 
+      ? (ac.current_value / totalPortfolioValue) * 100 
+      : 0;
+
+    if (ac.holdings) {
+      ac.holdings = ac.holdings.map((h) => ({
+        ...h,
+        // Gewicht van de individuele holding t.o.v. het GEHELE portfolio
+        weight: totalPortfolioValue > 0 
+          ? (h.value / totalPortfolioValue) * 100 
+          : 0,
+      }));
+    }
 
     return {
-      ...rawPortfolio,
-      assets: processedAssets,
-      assetClasses: assetClassNames,
-      performanceByClass,
-      summary: {
-        totalValue,
-        realizedReturnPct: pastPerformance?.portfolioTotal?.percentageReturn ?? "0.00",
-        futExpPct: (futureExpRaw * 100).toFixed(2),
-        sentiment: futureExpRaw > historicalExp ? "Optimistic" : "Conservative",
-        performance: portfolioReturns
-      },
-      analytics: {
-        past: pastPerformance,
-        projections: {
-          historical: (historicalExp * 100).toFixed(2),
-          future: (futureExpRaw * 100).toFixed(2)
-        }
-      }
+      ...ac,
+      allocation_percent: classAllocation,
     };
-  } catch (error) {
-    console.error("Fout in PortfolioEngine:", error);
-    return null;
-  }
+  });
+
+  return updatedPortfolio;
 };

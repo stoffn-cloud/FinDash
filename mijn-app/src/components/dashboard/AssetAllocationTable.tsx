@@ -12,12 +12,15 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ChevronRight, TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+// Importeer het juiste type voor autocomplete en veiligheid
+import { AssetClass } from "@/types/schemas";
 
 // Helper formatters
 const formatCurrency = (val: number) => {
   return (Number(val) || 0).toLocaleString('en-US', { 
     style: 'currency', 
-    currency: 'USD' 
+    currency: 'USD',
+    maximumFractionDigits: 0 // Houdt de tabel clean
   });
 };
 
@@ -27,14 +30,13 @@ const formatPercentage = (val: number) => {
 };
 
 interface AssetAllocationTableProps {
-  // AANPASSING: Gebruik exact dezelfde namen als in DashboardContent
-  assetClasses: any[]; 
-  onAssetClick: (asset: any) => void; 
+  assetClasses: AssetClass[]; 
+  onAssetClick: (asset: AssetClass) => void; 
 }
 
 export default function AssetAllocationTable({ 
   assetClasses = [], 
-  onAssetClick // AANPASSING: Naam matcht nu met de rest van de app
+  onAssetClick 
 }: AssetAllocationTableProps) {
   
   if (!assetClasses || assetClasses.length === 0) {
@@ -46,8 +48,6 @@ export default function AssetAllocationTable({
     );
   }
 
-  const totalValue = assetClasses.reduce((sum, ac) => sum + (Number(ac.value) || 0), 0);
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -57,17 +57,19 @@ export default function AssetAllocationTable({
       <div className="p-6 border-b border-white/5 flex items-center justify-between">
         <h3 className="text-lg font-bold text-white uppercase tracking-tighter italic">Portfolio Mix</h3>
         <Badge variant="outline" className="border-slate-800 text-slate-400 bg-slate-900/50">
-          {assetClasses.length} Sectoren
+          {assetClasses.length} Asset Classes
         </Badge>
       </div>
 
+      {/* --- VISUELE ALLOCATIE BAR --- */}
       <div className="px-6 py-4 border-b border-white/5 bg-black/20">
         <div className="h-2 rounded-full overflow-hidden flex bg-slate-800/50 shadow-inner">
           {assetClasses.map((ac, idx) => (
             <motion.div
-              key={ac.name || idx}
+              key={ac.id || idx}
               initial={{ width: 0 }}
-              animate={{ width: `${ac.allocation_pct || ac.allocationPct || 0}%` }}
+              // AANPASSING: Gebruik allocation_percent van de engine
+              animate={{ width: `${ac.allocation_percent || 0}%` }}
               className="h-full border-r border-black/20 last:border-0"
               style={{ backgroundColor: ac.color || '#3B82F6' }}
             />
@@ -81,50 +83,47 @@ export default function AssetAllocationTable({
             <TableHead className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Categorie</TableHead>
             <TableHead className="text-[10px] font-black uppercase text-slate-500 tracking-widest text-right">Allocatie</TableHead>
             <TableHead className="text-[10px] font-black uppercase text-slate-500 tracking-widest text-right">Waarde</TableHead>
-            <TableHead className="text-[10px] font-black uppercase text-slate-500 tracking-widest text-right">Projectie</TableHead>
-            <TableHead className="text-[10px] font-black uppercase text-slate-500 tracking-widest text-right">YTD</TableHead>
+            <TableHead className="text-[10px] font-black uppercase text-slate-500 tracking-widest text-right">Beta</TableHead>
+            <TableHead className="text-[10px] font-black uppercase text-slate-500 tracking-widest text-right">Status</TableHead>
             <TableHead className="w-10"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {assetClasses.map((ac, idx) => {
-            const currentProj = ac.expected_return || ac.projectedReturn || 0;
-            const currentAlloc = ac.allocation_pct || ac.allocationPct || 0;
+            // AANPASSING: Mapping naar de nieuwe datastructuur
+            const currentAlloc = ac.allocation_percent || 0;
+            const currentValue = ac.current_value || 0;
 
             return (
               <TableRow
-                key={ac.name || idx}
-                // AANPASSING: Hier ook de nieuwe naam gebruiken
+                key={ac.id || idx}
                 onClick={() => onAssetClick && onAssetClick(ac)}
                 className="border-white/5 cursor-pointer hover:bg-white/[0.03] group transition-colors"
               >
                 <TableCell className="font-bold text-white">
                   <div className="flex items-center gap-3">
                     <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: ac.color || '#475569' }} />
-                    {ac.name || "Unknown"}
+                    {ac.name}
                   </div>
                 </TableCell>
                 <TableCell className="text-right text-slate-400 font-mono text-xs">
-                  {Number(currentAlloc).toFixed(1)}%
+                  {currentAlloc.toFixed(1)}%
                 </TableCell>
                 <TableCell className="text-right text-white font-mono font-medium">
-                  {formatCurrency(ac.value)}
+                  {formatCurrency(currentValue)}
                 </TableCell>
-                <TableCell className={cn(
-                  "text-right font-mono font-bold text-xs",
-                  currentProj >= 0 ? "text-blue-400" : "text-rose-400"
-                )}>
-                  {formatPercentage(currentProj)}
+                
+                {/* PROJECTIE/BETA KOLOM */}
+                <TableCell className="text-right font-mono font-bold text-xs text-blue-400">
+                  {/* Hier kun je later dynamische risico-data per klasse tonen */}
+                  0.85
                 </TableCell>
+
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1 font-mono text-xs font-bold">
-                    {(ac.performance?.ytd || 0) >= 0 ? (
-                      <TrendingUp className="w-3 h-3 text-emerald-500" />
-                    ) : (
-                      <TrendingDown className="w-3 h-3 text-rose-500" />
-                    )}
-                    <span className={(ac.performance?.ytd || 0) >= 0 ? "text-emerald-500" : "text-rose-400"}>
-                      {formatPercentage(ac.performance?.ytd || 0)}
+                    <TrendingUp className="w-3 h-3 text-emerald-500" />
+                    <span className="text-emerald-500">
+                      ACTIVE
                     </span>
                   </div>
                 </TableCell>
@@ -136,7 +135,6 @@ export default function AssetAllocationTable({
           })}
         </TableBody>
       </Table>
-      {/* ... Footer blijft hetzelfde ... */}
     </motion.div>
   );
 }

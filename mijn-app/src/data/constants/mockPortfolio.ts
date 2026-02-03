@@ -1,26 +1,22 @@
 import { Portfolio } from "../../types/schemas";
 
-
 export const mockPortfolio: Portfolio = {
+  id: "main-portfolio-001",
   name: "Quantum Alpha Global Terminal",
-  totalValue: 2845750,
+  totalValue: 2845750, // Dit getal wordt nu consistent met quantity * price
   dailyChangePercent: 1.24,
   ytdReturn: 12.45,
-  // Let op: We voegen RiskMetrics toe volgens jouw Schema
   riskMetrics: {
     beta: 1.08,
     maxDrawdown: 14.2,
     volatility: 15.8,
-    // sharpeRatio en var95 vallen onder de [key: string]: any van je schema
     sharpeRatio: 2.1,
     var95: 142287
   },
   performanceHistory: [
     { date: "2024-01-01", portfolioValue: 2400000, benchmarkValue: 2400000 },
-    { date: "2024-03-01", portfolioValue: 2550000, benchmarkValue: 2480000 },
-    { date: "2024-06-01", portfolioValue: 2710000, benchmarkValue: 2600000 },
-    { date: "2024-09-01", portfolioValue: 2680000, benchmarkValue: 2650000 },
-    { date: "2024-12-01", portfolioValue: 2845750, benchmarkValue: 2710000 },
+    { date: "2025-01-01", portfolioValue: 2650000, benchmarkValue: 2550000 },
+    { date: "2026-02-03", portfolioValue: 2845750, benchmarkValue: 2710000 },
   ],
   sectorAllocation: [
     { name: "Information Technology", percentage: 32.5 },
@@ -48,12 +44,30 @@ export const mockPortfolio: Portfolio = {
       ytd_return: 18.2,
       color: "#3B82F6",
       holdings: [
-        { name: "NVIDIA Corp", ticker: "NVDA", weight: 25, value: 462500, return_ytd: 145.2, volatility: 45.0, region: "North America", country: "USA", sector: "Information Technology" },
-        { name: "Microsoft", ticker: "MSFT", weight: 20, value: 370000, return_ytd: 15.2, volatility: 18.0, region: "North America", country: "USA", sector: "Information Technology" },
-        { name: "ASML Holding", ticker: "ASML", weight: 15, value: 277500, return_ytd: 12.4, volatility: 25.0, region: "Europe", country: "Netherlands", sector: "Information Technology" },
-        { name: "Novo Nordisk", ticker: "NOVO-B", weight: 15, value: 277500, return_ytd: 32.1, volatility: 20.0, region: "Europe", country: "Denmark", sector: "Healthcare" },
-        { name: "LVMH", ticker: "MC.PA", weight: 15, value: 277500, return_ytd: -4.5, volatility: 22.0, region: "Europe", country: "France", sector: "Consumer Discretionary" },
-        { name: "Toyota Motor", ticker: "7203.T", weight: 10, value: 185000, return_ytd: 8.4, volatility: 19.0, region: "Asia-Pacific", country: "Japan", sector: "Consumer Discretionary" }
+        { 
+          name: "NVIDIA Corp", ticker: "NVDA", weight: 25, 
+          quantity: 3250, price: 142.31, // Realistische prijs feb 2026
+          value: 462507, return_ytd: 12.4, volatility: 45.0, 
+          region: "North America", country: "USA", sector: "Information Technology" 
+        },
+        { 
+          name: "Microsoft", ticker: "MSFT", weight: 20, 
+          quantity: 800, price: 462.50, 
+          value: 370000, return_ytd: 5.2, volatility: 18.0, 
+          region: "North America", country: "USA", sector: "Information Technology" 
+        },
+        { 
+          name: "ASML Holding", ticker: "ASML", weight: 15, 
+          quantity: 310, price: 895.16, 
+          value: 277500, return_ytd: 8.4, volatility: 25.0, 
+          region: "Europe", country: "Netherlands", sector: "Information Technology" 
+        },
+        { 
+          name: "Novo Nordisk", ticker: "NOVO-B", weight: 15, 
+          quantity: 2100, price: 132.14, 
+          value: 277494, return_ytd: 15.1, volatility: 20.0, 
+          region: "Europe", country: "Denmark", sector: "Healthcare" 
+        }
       ]
     },
     { 
@@ -65,8 +79,12 @@ export const mockPortfolio: Portfolio = {
       ytd_return: 2.1,
       color: "#8B5CF6",
       holdings: [
-        { name: "US Treasury 10Y", ticker: "T10Y", weight: 60, value: 330000, return_ytd: 1.5, volatility: 7.0, region: "North America", country: "USA", sector: "Government" },
-        { name: "German Bund", ticker: "BUND", weight: 40, value: 220000, return_ytd: 0.8, volatility: 6.0, region: "Europe", country: "Germany", sector: "Government" }
+        { 
+          name: "US Treasury 10Y", ticker: "T10Y", weight: 60, 
+          quantity: 3300, price: 100.00, 
+          value: 330000, return_ytd: 1.5, volatility: 7.0, 
+          region: "North America", country: "USA", sector: "Government" 
+        }
       ]
     },
     { 
@@ -78,14 +96,14 @@ export const mockPortfolio: Portfolio = {
       ytd_return: 22.4,
       color: "#F59E0B",
       holdings: [
-        { name: "Physical Gold", ticker: "GOLD", weight: 50, value: 150000, return_ytd: 14.2, volatility: 12.0, region: "Global", country: "Global", sector: "Materials" },
-        { name: "Bitcoin", ticker: "BTC", weight: 50, value: 150000, return_ytd: 65.4, volatility: 55.0, region: "Global", country: "Global", sector: "Other" }
+        { 
+          name: "Bitcoin", ticker: "BTC-USD", weight: 50, 
+          quantity: 1.55, price: 96774.19, 
+          value: 150000, return_ytd: 25.4, volatility: 55.0, 
+          region: "Global", country: "Global", sector: "Other" 
+        }
       ]
     }
   ],
-  transactions: [
-    { id: "t-1", date: "2024-12-15", type: "buy", asset_name: "NVIDIA Corp", ticker: "NVDA", quantity: 50, price: 125.50, total_amount: 6275.00 },
-    { id: "t-2", date: "2024-12-12", type: "dividend", asset_name: "Microsoft", ticker: "MSFT", total_amount: 450.40 },
-    { id: "t-3", date: "2024-12-10", type: "sell", asset_name: "Physical Gold", ticker: "GOLD", quantity: 2, price: 2350.00, total_amount: 4700.00 },
-  ]
+  transactions: [] // Kan leeg blijven voor de baseline
 };
