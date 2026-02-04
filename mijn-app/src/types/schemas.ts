@@ -2,26 +2,30 @@ import { Weight } from "lucide-react";
 import { z } from "zod";
 
 export const HoldingSchema = z.object({
+  id: z.string(),
   name: z.string(),
   ticker: z.string(),
   quantity: z.number(), // Verplicht: hoeveel stuks heb je?
   price: z.number(), // Verplicht: wat is de huidige koers?
-  value: z.number(),
-  weight: z.number(),
+  beta: z.number().optional(),
+  value: z.number().optional(),
+  weight: z.number().optional(),
   return_ytd: z.number().optional(),
   volatility: z.number().optional(),
   region: z.string().optional(),
   country: z.string().optional(),
   sector: z.string().optional(),
+  assetClass: z.string().optional(),
 });
 
 export const AssetClassSchema = z.object({
   id: z.string(),
   name: z.string(),
-  current_value: z.number(),
-  allocation_percent: z.number(),
-  expected_return: z.number(),
-  ytd_return: z.number(),
+  current_value: z.number().optional(),
+  allocation_percent: z.number().optional(),
+  beta: z.number().optional(),
+  expected_return: z.number().optional().default(0),
+  ytd_return: z.number().optional().default(0),
   color: z.string(),
   holdings: z.array(HoldingSchema).optional(),
 });
@@ -65,7 +69,7 @@ export const TransactionSchema = z.object({
 export const PortfolioSchema = z.object({
   id: z.string(),
   name: z.string(),
-  totalValue: z.number(),
+  totalValue: z.number().optional().default(0),
   dailyChangePercent: z.number().optional().default(0),
   ytdReturn: z.number().optional().default(0),
   riskMetrics: RiskMetricsSchema.optional(),

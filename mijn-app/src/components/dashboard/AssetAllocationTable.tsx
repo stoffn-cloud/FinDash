@@ -77,64 +77,78 @@ export default function AssetAllocationTable({
         </div>
       </div>
 
-      <Table>
-        <TableHeader>
-          <TableRow className="border-white/5 hover:bg-transparent">
-            <TableHead className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Categorie</TableHead>
-            <TableHead className="text-[10px] font-black uppercase text-slate-500 tracking-widest text-right">Allocatie</TableHead>
-            <TableHead className="text-[10px] font-black uppercase text-slate-500 tracking-widest text-right">Waarde</TableHead>
-            <TableHead className="text-[10px] font-black uppercase text-slate-500 tracking-widest text-right">Beta</TableHead>
-            <TableHead className="text-[10px] font-black uppercase text-slate-500 tracking-widest text-right">Status</TableHead>
-            <TableHead className="w-10"></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {assetClasses.map((ac, idx) => {
-            // AANPASSING: Mapping naar de nieuwe datastructuur
-            const currentAlloc = ac.allocation_percent || 0;
-            const currentValue = ac.current_value || 0;
+      {/* ... bovenkant van de component blijft gelijk ... */}
 
-            return (
-              <TableRow
-                key={ac.id || idx}
-                onClick={() => onAssetClick && onAssetClick(ac)}
-                className="border-white/5 cursor-pointer hover:bg-white/[0.03] group transition-colors"
-              >
-                <TableCell className="font-bold text-white">
-                  <div className="flex items-center gap-3">
-                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: ac.color || '#475569' }} />
-                    {ac.name}
-                  </div>
-                </TableCell>
-                <TableCell className="text-right text-slate-400 font-mono text-xs">
-                  {currentAlloc.toFixed(1)}%
-                </TableCell>
-                <TableCell className="text-right text-white font-mono font-medium">
-                  {formatCurrency(currentValue)}
-                </TableCell>
-                
-                {/* PROJECTIE/BETA KOLOM */}
-                <TableCell className="text-right font-mono font-bold text-xs text-blue-400">
-                  {/* Hier kun je later dynamische risico-data per klasse tonen */}
-                  0.85
-                </TableCell>
+<Table>
+  <TableHeader>
+    <TableRow className="border-white/5 hover:bg-transparent">
+      <TableHead className="text-[10px] font-black uppercase text-slate-500 tracking-widest">
+            Categorie</TableHead>
+      <TableHead className="text-[10px] font-black uppercase text-slate-500 tracking-widest text-right">
+            Allocatie</TableHead>
+      <TableHead className="text-[10px] font-black uppercase text-slate-500 tracking-widest text-right"> 
+            Waarde</TableHead>
+      <TableHead className="text-[10px] font-black uppercase text-blue-500/70 tracking-widest text-right">
+            Beta (β)</TableHead>
+      <TableHead className="text-[10px] font-black uppercase text-slate-500 tracking-widest text-right">
+            Status</TableHead>
+      <TableHead className="w-10"></TableHead>
+    </TableRow>
+  </TableHeader>
+  <TableBody>
+    {assetClasses.map((ac, idx) => {
+      const currentAlloc = ac.allocation_percent || 0;
+      const currentValue = ac.current_value || 0;
+      
+      // We halen de berekende bèta uit de asset class (fallback naar 1.00)
+      const classBeta = (ac as any).beta || 1.00;
 
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-1 font-mono text-xs font-bold">
-                    <TrendingUp className="w-3 h-3 text-emerald-500" />
-                    <span className="text-emerald-500">
-                      ACTIVE
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <ChevronRight className="w-4 h-4 text-slate-700 group-hover:text-blue-400 group-hover:translate-x-1 transition-all" />
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+      return (
+        <TableRow
+          key={ac.id || idx}
+          onClick={() => onAssetClick && onAssetClick(ac)}
+          className="border-white/5 cursor-pointer hover:bg-white/[0.03] group transition-colors"
+        >
+          <TableCell className="font-bold text-white">
+            <div className="flex items-center gap-3">
+              <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: ac.color || '#475569' }} />
+              {ac.name}
+            </div>
+          </TableCell>
+          <TableCell className="text-right text-slate-400 font-mono text-xs">
+            {currentAlloc.toFixed(1)}%
+          </TableCell>
+          <TableCell className="text-right text-white font-mono font-medium">
+            {formatCurrency(currentValue)}
+          </TableCell>
+          
+          {/* DYNAMISCHE BETA KOLOM */}
+          <TableCell className={cn(
+            "text-right font-mono font-bold text-xs",
+            classBeta > 1.2 ? "text-orange-400" : classBeta < 0.8 ? "text-emerald-400" : "text-blue-400"
+          )}>
+            {classBeta.toFixed(2)}
+          </TableCell>
+
+          <TableCell className="text-right">
+            <div className="flex items-center justify-end gap-1 font-mono text-[9px] font-black tracking-tighter">
+              <div className={cn(
+                "w-1 h-1 rounded-full animate-pulse",
+                classBeta > 1.5 ? "bg-rose-500" : "bg-emerald-500"
+              )} />
+              <span className="text-slate-500 uppercase">
+                {classBeta > 1.5 ? "Aggressive" : "Stable"}
+              </span>
+            </div>
+          </TableCell>
+          <TableCell>
+            <ChevronRight className="w-4 h-4 text-slate-700 group-hover:text-blue-400 group-hover:translate-x-1 transition-all" />
+          </TableCell>
+        </TableRow>
+      );
+    })}
+  </TableBody>
+</Table>
     </motion.div>
   );
 }

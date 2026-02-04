@@ -1,72 +1,95 @@
-// src/logic/portfolioEngine.ts
-import { Portfolio, AssetClass, Holding } from "../types/schemas";
+import { Portfolio, Holding, AssetClass } from "../types/schemas";
 
 /**
- * De statische rekenmotor van Quantum Alpha.
- * Deze functie voert een volledige aggregatie uit van de portfolio:
- * 1. Bereken de marktwaarde per holding (price * quantity).
- * 2. Sommeer holdings naar Asset Class niveau.
- * 3. Bereken het totale portfolio vermogen.
- * 4. Bereken alle relatieve gewichten (weights) op basis van het nieuwe totaal.
+ * Bouwt een volledig Portfolio object op basis van een platte lijst met assets.
+ * Berekent: Total Value, Asset Class verdeling, Gewichten, en Bèta.
  */
-export const calculatePortfolioTotals = (rawPortfolio: Portfolio): Portfolio => {
-  // We maken een diepe kopie om de originele mockData (baseline) niet te vervuilen
-  const updatedPortfolio: Portfolio = JSON.parse(JSON.stringify(rawPortfolio));
+export const buildPortfolioFromAssets = (assets: Holding[]): Portfolio => {
+  // 1. Bereken de totale waarde van het hele portfolio (de noemer)
+  const totalPortfolioValue = assets.reduce((sum, h) => sum + (h.quantity * h.price), 0);
 
-  let totalPortfolioValue = 0;
+  // 2. Groepeer assets per Asset Class
+  const groups = assets.reduce((acc, h) => {
+    const className = h.assetClass || "Other";
+    if (!acc[className]) acc[className] = [];
+    acc[className].push(h);
+    return acc;
+  }, {} as Record<string, Holding[]>);
 
-  // STAP 1 & 2: Bereken waarden op Holding niveau en aggregeer naar Asset Class
-  updatedPortfolio.assetClasses = updatedPortfolio.assetClasses.map((ac: AssetClass) => {
-    let classTotalValue = 0;
-
-    if (ac.holdings && ac.holdings.length > 0) {
-      ac.holdings = ac.holdings.map((h: Holding) => {
-        // Bereken de actuele waarde van de positie
-        const marketValue = h.quantity * h.price;
-        classTotalValue += marketValue;
-
-        return {
-          ...h,
-          value: marketValue,
-        };
-      });
-    }
-
-    // Update de totale waarde van de asset class zelf
-    totalPortfolioValue += classTotalValue;
+  // 3. Transformeer groepen naar AssetClass objecten
+  const assetClasses: AssetClass[] = Object.entries(groups).map(([name, holdings], index) => {
+    const classValue = holdings.reduce((sum, h) => sum + (h.quantity * h.price), 0);
     
+    // Bereken gewogen Bèta van deze specifieke klasse
+    const classBeta = holdings.reduce((sum, h) => {
+      const weightInClass = classValue > 0 ? (h.quantity * h.price) / classValue : 0;
+      return sum + ((h.beta ?? 1.0) * weightInClass);
+    }, 0);
+
+    // Update de individuele holdings met hun gewicht t.o.v. het TOTAAL
+    const updatedHoldings = holdings.map(h => ({
+      ...h,
+      value: h.quantity * h.price,
+      weight: totalPortfolioValue > 0 ? ((h.quantity * h.price) / totalPortfolioValue) * 100 : 0
+    }));
+
     return {
-      ...ac,
-      current_value: classTotalValue,
+      id: `ac-${index}`,
+      name: name as any,
+      current_value: classValue,
+      allocation_percent: totalPortfolioValue > 0 ? (classValue / totalPortfolioValue) * 100 : 0,
+      beta: classBeta,
+      holdings: updatedHoldings,
+      color: getColorForClass(name), // Dynamische kleur
+      expected_return: 0,
+      ytd_return: 0
     };
   });
 
-  // STAP 3: Zet het berekende totaal in het portfolio object
-  updatedPortfolio.totalValue = totalPortfolioValue;
+  // 4. Bereken de totale Portfolio Bèta
+  const totalPortfolioBeta = assetClasses.reduce((sum, ac) => {
+    return sum + (ac.beta! * (ac.allocation_percent! / 100));
+  }, 0);
 
-  // STAP 4: Bereken de relatieve gewichten (Allocatie %)
-  // Nu we het totaal (totalPortfolioValue) weten, kunnen we de percentages bepalen.
-  updatedPortfolio.assetClasses = updatedPortfolio.assetClasses.map((ac) => {
-    // Allocatie van de klasse t.o.v. het totaal
-    const classAllocation = totalPortfolioValue > 0 
-      ? (ac.current_value / totalPortfolioValue) * 100 
-      : 0;
+  // 5. Bouw sector allocatie (voor de charts)
+  const sectorMap: Record<string, number> = {};
+  assets.forEach(h => {
+    const s = h.sector || "Other";
+    sectorMap[s] = (sectorMap[s] || 0) + (h.quantity * h.price);
+  });
 
-    if (ac.holdings) {
-      ac.holdings = ac.holdings.map((h) => ({
-        ...h,
-        // Gewicht van de individuele holding t.o.v. het GEHELE portfolio
-        weight: totalPortfolioValue > 0 
-          ? (h.value / totalPortfolioValue) * 100 
-          : 0,
-      }));
+  const sectorAllocation = Object.entries(sectorMap).map(([name, value]) => ({
+    name: name as any,
+    percentage: totalPortfolioValue > 0 ? (value / totalPortfolioValue) * 100 : 0,
+    value
+  }));
+
+  return {
+    id: "generated-portfolio",
+    name: "Dynamic Alpha Portfolio",
+    totalValue: totalPortfolioValue,
+    dailyChangePercent: 0,
+    ytdReturn: 0,
+    assetClasses,
+    sectorAllocation,
+    currencyAllocation: [], 
+    performanceHistory: [],
+    transactions: [],
+    riskMetrics: {
+      beta: Number(totalPortfolioBeta.toFixed(2)),
+      volatility: 0,
+      maxDrawdown: 0
     }
-
-    return {
-      ...ac,
-      allocation_percent: classAllocation,
-    };
-  });
-
-  return updatedPortfolio;
+  };
 };
+
+// Hulpmiddel voor kleuren
+function getColorForClass(name: string) {
+  const colors: Record<string, string> = {
+    "Equities": "#3B82F6",
+    "Bonds & Fixed Income": "#8B5CF6",
+    "Crypto Assets": "#F59E0B",
+    "Cash & Equivalents": "#10B981"
+  };
+  return colors[name] || "#94A3B8";
+}

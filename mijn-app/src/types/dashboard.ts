@@ -42,25 +42,28 @@ export interface Holding {
   id: string; // NIEUW: Altijd handig voor React keys en database lookups
   name: string;
   ticker: string;
-  weight: number;
+  weight?: number;
   quantity?: number; // NIEUW: Nodig om waarde te berekenen (quantity * price)
   price?: number;    // NIEUW: De live prijs van Yahoo Finance
-  value: number;
+  beta?: number;
+  value?: number;
   return_ytd: number;
   volatility?: number;
   region?: RegionName;
   country?: string;
   sector?: SectorName;   // NIEUW: Om sectorAllocation automatisch te berekenen
+  assetClass?: AssetClassName; // NIEUW: Om assetClasses automatisch te berekenen
 }
 
 export interface AssetClass {
-  id: string; // Verplicht maken voor mapping
+  id: string;
   name: AssetClassName;
-  allocation_percent: number;
-  current_value: number;
-  expected_return: number;
-  ytd_return: number;
-  color: string;
+  allocation_percent?: number;
+  beta?: number;
+  current_value?: number;
+  expected_return?: number;
+  ytd_return?: number;
+  color?: string;
   holdings: Holding[]; // Verplicht maken (leeg array is ook goed)
   volatility?: number;
 }
@@ -78,7 +81,7 @@ export interface Currency {
 }
 
 export interface RiskMetrics {
-  beta?: number;
+  beta: number;
   maxDrawdown?: number;
   volatility?: number;
   [key: string]: any;
@@ -93,9 +96,9 @@ export interface PerformancePoint {
 export interface Portfolio {
   id: string; // NIEUW: Unieke identificatie van de set
   name: string;
-  totalValue: number;
-  dailyChangePercent: number;
-  ytdReturn: number;
+  totalValue?: number;
+  dailyChangePercent?: number;
+  ytdReturn?: number;
   riskMetrics: RiskMetrics;
   performanceHistory: PerformancePoint[];
   sectorAllocation: Sector[];
