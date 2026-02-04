@@ -5,6 +5,38 @@ import { Portfolio, Holding } from "../types/schemas";
 import { buildPortfolioFromAssets } from "../logic/portfolioEngine";
 
 class PortfolioStore {
+
+public async searchInSheet(sheetName: string, ticker: string) {
+  try {
+    // URL van je Google Sheet (gepubliceerd als CSV)
+    // Tip: Je kunt de GID (Sheet ID) achter de URL plakken om de juiste tab te pakken
+    const SHEET_URL = `https://docs.google.com/spreadsheets/d/1a_1ZHYG8pLbwX5zIwI5O-_Dt8KqjXEk1H2G_8dtBUNo/edit?gid=0#gid=0`;
+    
+    const response = await fetch(SHEET_URL);
+    const csvText = await response.text();
+    
+    // Simpele CSV parser (of gebruik PapaParse)
+    const rows = csvText.split('\n').map(row => row.split(',').map(cell => cell.replace(/"/g, '')));
+    const headers = rows[0];
+    const tickerIndex = headers.findIndex(h => h.toLowerCase() === 'ticker');
+    const priceIndex = headers.findIndex(h => h.toLowerCase() === 'price');
+
+    const dataRow = rows.find(row => row[tickerIndex] === ticker);
+
+    if (dataRow) {
+      return {
+        ticker: dataRow[tickerIndex],
+        price: parseFloat(dataRow[priceIndex]),
+        // Voeg hier meer velden toe die in je sheet staan
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error("Zoeken in sheet mislukt", error);
+    return null;
+  }
+}
+
   private portfolio: Portfolio;
   private listeners: (() => void)[] = [];
 

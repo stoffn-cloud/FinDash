@@ -18,6 +18,7 @@ import {
   Zap,
   RefreshCcw,
   ShieldAlert,
+  Search,
   Plus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -56,7 +57,7 @@ export default function Dashboard() {
     setIsFetching(false);
   };
 
-  const handleAssetClick = (asset: AssetClass) => {
+  const handleAssetClick = (asset: any) => {
     setSelectedAssetClass(asset);
   };
 
@@ -186,6 +187,7 @@ export default function Dashboard() {
     { id: "Markets", icon: Landmark, tooltip: "Markets Analysis" },
     { id: "Calendar", icon: Calendar, tooltip: "Economic Calendar" },
     { id: "Strategy", icon: Zap, tooltip: "Strategy Builder" },
+    { id: 'Search', label: 'Search', icon: Search },
     { id: "Calculator", icon: Calculator, tooltip: "Monte Carlo Sim" }
   ].map((item, i) => (
     <TooltipProvider key={i}>
@@ -241,6 +243,7 @@ export default function Dashboard() {
         {activeTab === "Markets" && "Markets Analysis"}
         {activeTab === "Calendar" && "Economic Scheduler"}
         {activeTab === "Strategy" && "strategy builder"}
+        {activeTab === "Search" && "Asset Search"}
         {activeTab === "History" && "Transaction History"}
         {activeTab === "Calculator" && "Calculator Module"}
         {activeTab === "Editor" && "Portfolio Editor"}
@@ -318,9 +321,13 @@ export default function Dashboard() {
       {/* TRANSACTION HISTORY TAB */}
       {activeTab === "History" && (
        <div className="animate-in fade-in duration-500">
-         {/* Hier kun je eventueel een HistoryTab plaatsen */}
           <p className="text-slate-500 font-mono text-center py-20">Transaction history module loading...</p>
        </div>
+      )}
+
+      {/* SEARCH TAB */}
+      {activeTab === "Risk" && (
+        <DashboardContent portfolio={portfolio} onAssetClick={handleAssetClick} showOnly="search" />
       )}
 
       {/* CALCULATIONS / RISK ANALYSIS TAB */}
