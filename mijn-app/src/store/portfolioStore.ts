@@ -1,65 +1,74 @@
 import { useState, useEffect } from "react";
-// mockPortfolio is nu je lijst met losse assets (Holding[])
 import { mockPortfolio } from "../data/constants/mockPortfolio";
 import { Portfolio, Holding } from "../types/schemas"; 
 import { buildPortfolioFromAssets } from "../logic/portfolioEngine";
 
 class PortfolioStore {
-
-public async searchInSheet(sheetName: string, ticker: string) {
-  try {
-    // URL van je Google Sheet (gepubliceerd als CSV)
-    // Tip: Je kunt de GID (Sheet ID) achter de URL plakken om de juiste tab te pakken
-    const SHEET_URL = `https://docs.google.com/spreadsheets/d/1a_1ZHYG8pLbwX5zIwI5O-_Dt8KqjXEk1H2G_8dtBUNo/edit?gid=0#gid=0`;
-    
-    const response = await fetch(SHEET_URL);
-    const csvText = await response.text();
-    
-    // Simpele CSV parser (of gebruik PapaParse)
-    const rows = csvText.split('\n').map(row => row.split(',').map(cell => cell.replace(/"/g, '')));
-    const headers = rows[0];
-    const tickerIndex = headers.findIndex(h => h.toLowerCase() === 'ticker');
-    const priceIndex = headers.findIndex(h => h.toLowerCase() === 'price');
-
-    const dataRow = rows.find(row => row[tickerIndex] === ticker);
-
-    if (dataRow) {
-      return {
-        ticker: dataRow[tickerIndex],
-        price: parseFloat(dataRow[priceIndex]),
-        // Voeg hier meer velden toe die in je sheet staan
-      };
-    }
-    return null;
-  } catch (error) {
-    console.error("Zoeken in sheet mislukt", error);
-    return null;
-  }
-}
-
   private portfolio: Portfolio;
   private listeners: (() => void)[] = [];
+  private isLoading: boolean = false;
+
+  private SHEET_ID = '1a_1ZHYG8pLbwX5zIwI5O-_Dt8KqjXEk1H2G_8dtBUNo';
+  // Voeg hier de GIDs toe van je tabbladen
+  private GIDS = ['0']; 
+  private TARGET_DATE = "2026-02-03";
 
   constructor() {
-    // We bouwen het portfolio direct op uit de losse assets
+    // Initiële bouw met mockData (prijzen zijn dan 0 of uit mock)
     this.portfolio = buildPortfolioFromAssets(mockPortfolio as any);
   }
 
-  // Methode om de huidige staat op te vragen
+  /**
+   * Haalt alle data op uit Google Sheets en update de hele store
+   */
+  public async syncWithGoogleSheets() {
+    this.isLoading = true;
+    this.notify();
+
+    try {
+      const fetchPromises = this.GIDS.map(gid => 
+        fetch(`https://docs.google.com/spreadsheets/d/${this.SHEET_ID}/pub?gid=${gid}&single=true&output=csv`)
+          .then(res => res.text())
+      );
+
+      const csvResults = await Promise.all(fetchPromises);
+      const priceMap: Record<string, number> = {};
+
+      csvResults.forEach(csvText => {
+        const lines = csvText.split('\n').filter(Boolean);
+        // We skippen de header (i=0)
+        for (let i = 1; i < lines.length; i++) {
+          const [date, ticker, price] = lines[i].split(',').map(item => item.trim());
+          if (date === this.TARGET_DATE) {
+            priceMap[ticker] = parseFloat(price);
+          }
+        }
+      });
+
+      // Update de holdings in de mockPortfolio met de nieuwe prijzen
+      const updatedHoldings = (mockPortfolio as any).map((holding: any) => ({
+        ...holding,
+        // Zoek de prijs op in onze map, anders behoud huidige/0
+        price: priceMap[holding.ticker] || holding.price || 0 
+      }));
+
+      // Herbereken het hele portfolio via de engine
+      this.portfolio = buildPortfolioFromAssets(updatedHoldings);
+      console.log("🚀 Portfolio gesynced met Google Sheets");
+    } catch (error) {
+      console.error("❌ Sync mislukt:", error);
+    } finally {
+      this.isLoading = false;
+      this.notify();
+    }
+  }
+
   public getPortfolio(): Portfolio {
     return this.portfolio;
   }
 
-  // Gebruik deze als je handmatig een heel berekend object wilt pushen
-  public updatePortfolio(newPortfolio: Portfolio) {
-    this.portfolio = newPortfolio;
-    this.notify();
-  }
-
-  // Gebruik deze als je de lijst met assets verandert (hét scenario voor jou)
-  public updateAssets(newAssets: Holding[]) {
-    this.portfolio = buildPortfolioFromAssets(newAssets);
-    this.notify();
+  public getLoadingStatus(): boolean {
+    return this.isLoading;
   }
 
   private notify() {
@@ -68,36 +77,36 @@ public async searchInSheet(sheetName: string, ticker: string) {
 
   public subscribe(l: () => void) {
     this.listeners.push(l);
-    // Cleanup functie om geheugenlekken te voorkomen
     return () => { 
       this.listeners = this.listeners.filter(i => i !== l); 
     };
   }
 }
 
-// Singleton instantie van de store
 export const portfolioStore = new PortfolioStore();
 
 /**
- * Hook voor gebruik in React componenten
+ * Verbeterde Hook
  */
 export function usePortfolio() {
-  // Lazy initialization van de state
   const [portfolio, setPortfolio] = useState<Portfolio>(() => portfolioStore.getPortfolio());
+  const [loading, setLoading] = useState<boolean>(() => portfolioStore.getLoadingStatus());
 
   useEffect(() => {
-    // Abonneer op veranderingen in de store
     const unsubscribe = portfolioStore.subscribe(() => {
-      // We maken een ondiepe kopie om React te dwingen de UI te verversen
       setPortfolio({ ...portfolioStore.getPortfolio() });
+      setLoading(portfolioStore.getLoadingStatus());
     });
+    
+    // Start de sync automatisch bij laden van de app
+    portfolioStore.syncWithGoogleSheets();
     
     return unsubscribe;
   }, []);
 
   return { 
     portfolio,
-    // Handig: geef de update-functie direct door aan je componenten
-    updateAssets: (assets: Holding[]) => portfolioStore.updateAssets(assets)
+    loading,
+    refresh: () => portfolioStore.syncWithGoogleSheets()
   };
 }

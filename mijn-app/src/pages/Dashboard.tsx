@@ -1,6 +1,11 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { usePortfolio } from "@/api/portfolioStore";
+
+// 1. Nieuwe Sync Hook & Types importeren
+import { usePortfolioSync } from "../hooks/usePortfolioSync";
+import { mockPortfolio } from "../data/constants/mockPortfolio"; // Gecorrigeerd pad
+import type { PortfolioItem } from "../data/constants/mockPortfolio"; 
+import type { AssetClass } from "@/types/dashboard"; // Behoud je bestaande types indien nodig
+
 import { 
   Bell,
   Settings,
@@ -16,11 +21,12 @@ import {
   ExternalLink,
   ShieldCheck,
   Zap,
-  RefreshCcw,
+  RefreshCcw, // Handig voor de 'sync' button
   ShieldAlert,
   Search,
   Plus
 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -33,6 +39,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
+// UI Componenten (Zorg dat deze ook de nieuwe 'portfolio' prop accepteren)
 import DashboardContent from "@/components/dashboard/DashboardContent";
 import AssetClassDetail from "@/components/dashboard/AssetClassDetail";
 import RiskTab from "@/components/dashboard/RiskTab";
@@ -40,10 +47,7 @@ import StrategyTab from "@/components/dashboard/StrategyTab";
 import CalculationsTab from "@/components/dashboard/CalculationsTab";
 import CorrelationsTab from "@/components/dashboard/CorrelationsTab";
 
-import { mockPortfolio } from "@/app/api/mockData";
-import type { Portfolio, AssetClass } from "@/types/dashboard";
-
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 export default function Dashboard() {
@@ -244,7 +248,6 @@ export default function Dashboard() {
         {activeTab === "Calendar" && "Economic Scheduler"}
         {activeTab === "Strategy" && "strategy builder"}
         {activeTab === "Search" && "Asset Search"}
-        {activeTab === "History" && "Transaction History"}
         {activeTab === "Calculator" && "Calculator Module"}
         {activeTab === "Editor" && "Portfolio Editor"}
       </h1>
@@ -316,13 +319,6 @@ export default function Dashboard() {
           onAssetClick={handleAssetClick}
           showOnly="editor" 
         />
-      )}
-
-      {/* TRANSACTION HISTORY TAB */}
-      {activeTab === "History" && (
-       <div className="animate-in fade-in duration-500">
-          <p className="text-slate-500 font-mono text-center py-20">Transaction history module loading...</p>
-       </div>
       )}
 
       {/* SEARCH TAB */}
