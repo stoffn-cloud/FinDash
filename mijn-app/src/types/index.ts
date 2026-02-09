@@ -128,6 +128,16 @@ export interface EnrichedHolding extends PortfolioItem {
 }
 
 
+// --- PORTFOLIO
+export interface Portfolio {
+  id: string;
+  name: string;
+  holdings: EnrichedHolding[];
+  totalValue: number;
+  lastUpdated: string;
+}
+
+
 // 2. De Master View
 export const PortfolioItemSchema = z.object({
   ticker: z.string(),
@@ -140,6 +150,7 @@ export const PortfolioItemSchema = z.object({
   currency: z.string(),
   country: z.string(),
   region: z.string(),
+  price: z.number().optional().default(0), 
+  date: z.string().optional(), 
 });
-
 export type PortfolioItem = z.infer<typeof PortfolioItemSchema>;

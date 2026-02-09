@@ -1,33 +1,45 @@
-// src/logic/portfolioEngine.ts
-import { DefaultHolding } from "../data/constants/defaultPortfolio";
+import { deafaultPortfolio } from "../data/constants/defaultPortfolio";
 import { PortfolioItem, EnrichedHolding, Portfolio } from "../types";
 
-/**
- * Berekent de status van de default portfolio op een specifieke snapshot datum.
- */
-export const buildSnapshotPortfolio = (
-  dbMetadata: PortfolioItem[], // De prijzen en info uit SQL voor 31-01-2025
+export const calculatePortfolioSnapshot = (
+  dbMetadata: PortfolioItem[],
   snapshotDate: string = '2025-01-31'
-): EnrichedHolding[] => {
+): Portfolio => {
   
-  return DEFAULT_PORTFOLIO.map(holding => {
-    // 1. Zoek de prijs en info in de SQL data voor deze ticker
-    const sqlMatch = dbMetadata.find(m => m.ticker === holding.ticker);
+  const enrichedHoldings: EnrichedHolding[] = deafaultPortfolio.map((holding) => {
+    const sqlMatch = dbMetadata.find((m) => m.ticker === holding.ticker);
 
-    // 2. Pak de prijs (we gaan ervan uit dat je SQL query de prijs van 31 jan geeft)
-    const priceAtSnapshot = (sqlMatch as any)?.price || 0;
+    const priceAtSnapshot = sqlMatch?.price ?? 0;
     
-    // 3. De berekening: Hoeveelheid (constant) * Prijs op die datum (SQL)
-    const valueAtSnapshot = holding.quantity * priceAtSnapshot;
+    // We berekenen hier de velden die jouw type 'EnrichedHolding' verplicht stelt
+    const marketValue = holding.quantity * priceAtSnapshot;
+    const costBasis = holding.quantity * (holding.purchasePrice ?? 0);
 
     return {
-      ...(sqlMatch as PortfolioItem),
+      // 1. Haal alle metadata uit SQL binnen (full_name, sector, etc.)
+      ...(sqlMatch as PortfolioItem), 
+      
+      // 2. Voeg de velden uit de default portfolio toe
       ticker: holding.ticker,
       quantity: holding.quantity,
       purchaseDate: holding.purchaseDate,
       purchasePrice: holding.purchasePrice,
-      price: priceAtSnapshot,
-      value: valueAtSnapshot,
+
+      // 3. Match de namen exact met jouw EnrichedHolding interface
+      currentPrice: priceAtSnapshot,
+      marketValue: marketValue,
+      costBasis: costBasis,
     } as EnrichedHolding;
   });
+
+  // 4. Bereken de totale waarde met de juiste property naam: 'marketValue'
+  const totalValue = enrichedHoldings.reduce((sum, h) => sum + h.marketValue, 0);
+
+  return {
+    id: "default-portfolio-snapshot",
+    name: "Mijn Portfolio",
+    holdings: enrichedHoldings,
+    totalValue: totalValue,
+    lastUpdated: snapshotDate
+  };
 };
