@@ -1,10 +1,6 @@
-import { useState } from "react";
 
-// 1. Nieuwe Sync Hook & Types importeren
-import { usePortfolioSync } from "../hooks/usePortfolioSync";
-import { mockPortfolio } from "../data/constants/mockPortfolio"; // Gecorrigeerd pad
-import type { PortfolioItem } from "../data/constants/mockPortfolio"; 
-import type { AssetClass } from "@/types/dashboard"; // Behoud je bestaande types indien nodig
+import { PortfolioItem } from "@/types";
+import { useEffect, useState } from "react";
 
 import { 
   Bell,
@@ -21,7 +17,7 @@ import {
   ExternalLink,
   ShieldCheck,
   Zap,
-  RefreshCcw, // Handig voor de 'sync' button
+  RefreshCcw,
   ShieldAlert,
   Search,
   Plus
@@ -51,22 +47,39 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 export default function Dashboard() {
-  const [selectedAssetClass, setSelectedAssetClass] = useState<AssetClass | null>(null);
-  const { portfolio, fetchLivePrices } = usePortfolio();
-  const [isFetching, setIsFetching] = useState(false);
+// 1. Nieuwe states voor je echte data
+    const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
+    const [isFetching, setIsFetching] = useState(false);
 
-  const handleRefetch = async () => {
-    setIsFetching(true);
-    await fetchLivePrices();
+// 2. De functie die met je SQL-backend praat
+    const handleRefetch = async () => {
+       setIsFetching(true);
+       try {
+    const response = await fetch('http://localhost:3001/api/portfolio/assets');
+       if (!response.ok) throw new Error('Netwerk response was niet ok');
+    const data = await response.json();
+       setPortfolio(data); // Je SQL data zit nu in je dashboard!
+       } catch (error) {
+    console.error("Sync fout:", error);
+  } finally {
     setIsFetching(false);
-  };
+  }
+};
 
-  const handleAssetClick = (asset: any) => {
-    setSelectedAssetClass(asset);
-  };
+// 1. Haal data op bij het laden van de pagina
+useEffect(() => {
+  handleRefetch();
+}, []);
 
-  const [activeTab, setActiveTab] = useState("Overview");
+// 2. Navigatie tussen tabs (Overview, Risk, etc.)
+const [activeTab, setActiveTab] = useState("Overview");
 
+// 3. Wat gebeurt er als je op een aandeel klikt in de lijst?
+const [selectedAsset, setSelectedAsset] = useState<PortfolioItem | null>(null);
+
+const handleAssetClick = (asset: PortfolioItem) => {
+  setSelectedAsset(asset);
+};
   return (
     <div className="min-h-screen bg-[#020617] text-slate-200 selection:bg-blue-500/30">
       {/* Background Gradients */}
