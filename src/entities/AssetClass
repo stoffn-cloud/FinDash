@@ -1,0 +1,71 @@
+{
+  "name": "AssetClass",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Asset class name (e.g., Equities, Fixed Income, Alternatives)"
+    },
+    "allocation_percent": {
+      "type": "number",
+      "description": "Target allocation percentage"
+    },
+    "current_value": {
+      "type": "number",
+      "description": "Current value in USD"
+    },
+    "expected_return": {
+      "type": "number",
+      "description": "Expected annual return percentage"
+    },
+    "volatility": {
+      "type": "number",
+      "description": "Historical volatility (sigma) percentage"
+    },
+    "ytd_return": {
+      "type": "number",
+      "description": "Year-to-date return percentage"
+    },
+    "color": {
+      "type": "string",
+      "description": "Display color for charts"
+    },
+    "holdings": {
+      "type": "array",
+      "description": "Individual holdings within this asset class",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "ticker": {
+            "type": "string"
+          },
+          "weight": {
+            "type": "number"
+          },
+          "value": {
+            "type": "number"
+          },
+          "return_ytd": {
+            "type": "number"
+          },
+          "volatility": {
+            "type": "number"
+          },
+          "region": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "name",
+    "allocation_percent"
+  ]
+}
