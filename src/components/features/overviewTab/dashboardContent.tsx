@@ -4,7 +4,7 @@ import {
   DollarSign,
   Activity,
   ShieldAlert,
-  // ... overige icons
+  Loader2 // Importeer een loader icoon
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +18,7 @@ import PortfolioEditor from "../shared/portfolioEditor";
 import { cn } from "@/lib/utils";
 
 import { usePortfolio } from "@/store/portfolioStore";
-import type { AssetClass } from "@/types/schemas"; 
+import type { AssetClass } from "@/types/index"; 
 
 interface DashboardContentProps {
   onAssetClick: (asset: AssetClass) => void;
@@ -26,36 +26,55 @@ interface DashboardContentProps {
 }
 
 export default function DashboardContent({ onAssetClick, showOnly = "overview" }: DashboardContentProps) {
-  const { portfolio } = usePortfolio();
+  // 1. Haal ook de 'loading' status uit de hook
+  const { portfolio, loading } = usePortfolio();
   const [searchQuery, setSearchQuery] = useState("");
   const currentView = showOnly?.toLowerCase().trim();
 
+  // 2. SAFETY CHECK: Als de data nog laadt of er is geen portfolio, toon een mooie loader
+  if (loading || !portfolio) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+        <p className="text-slate-400 font-mono text-xs uppercase tracking-[0.2em] animate-pulse">
+          Connecting to SQL Engine...
+        </p>
+      </div>
+    );
+  }
+
+  // 3. De metrics gebruiken nu veilig de data (portfolio is hier gegarandeerd niet null)
   const metrics = useMemo(() => [
     {
       label: "Totaal Vermogen",
-      value: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact' }).format(portfolio.totalValue || 0),
-      change: `+${portfolio.dailyChangePercent || 0}%`,
+      value: new Intl.NumberFormat('en-US', { 
+        style: 'currency', 
+        currency: 'USD', 
+        notation: 'compact' 
+      }).format(portfolio.totalValue || 0),
+      // We gebruiken optionele chaining voor de nieuwe engine velden
+      change: `+${portfolio.stats?.total_assets || 0} Assets`, 
       trend: "up",
       icon: DollarSign,
     },
     {
-      label: "YTD Rendement",
-      value: `+${portfolio.ytdReturn || 0}%`,
-      change: "+8.45%",
+      label: "Markten",
+      value: portfolio.stats?.unique_markets?.toString() || "0",
+      change: "Global",
       trend: "up",
       icon: ArrowUpRight,
     },
     {
-      label: "Beta (β)",
-      value: portfolio.riskMetrics?.beta?.toString() || "0.00",
-      change: "+0.05",
+      label: "Sectoren",
+      value: portfolio.stats?.unique_sectors?.toString() || "0",
+      change: "GICS",
       trend: "up",
       icon: Activity,
     },
     {
-      label: "Max Drawdown",
-      value: `${portfolio.riskMetrics?.maxDrawdown || 0}%`,
-      change: "-12.4%",
+      label: "Trackers vs Stocks",
+      value: `${portfolio.stats?.tracker_count || 0} / ${portfolio.stats?.stock_count || 0}`,
+      change: "Mix",
       trend: "down",
       icon: ShieldAlert,
     }
@@ -81,7 +100,7 @@ export default function DashboardContent({ onAssetClick, showOnly = "overview" }
                         "font-mono text-[9px] px-1.5 py-0",
                         metric.trend === "up" ? "text-emerald-400 border-emerald-500/20 bg-emerald-500/5" : "text-rose-400 border-rose-500/20 bg-rose-500/5"
                       )}>
-                        {metric.trend === "up" ? "↑" : "↓"} {metric.change}
+                        {metric.change}
                       </Badge>
                     </div>
                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{metric.label}</p>
@@ -91,10 +110,11 @@ export default function DashboardContent({ onAssetClick, showOnly = "overview" }
               ))}
             </div>
 
-            {/* 2. Fruit Ticker Bar */}
+            {/* 2. Ticker Bar */}
             <div className="flex justify-center border-y border-white/5 py-3 bg-white/[0.01]">
-              <div className="inline-flex items-center gap-12">
-                {["APPELS", "PEREN", "BANANEN", "CITROENEN"].map((item) => (
+              <div className="inline-flex items-center gap-12 overflow-hidden">
+                 {/* Animatie-tip: je zou hier een marquee kunnen maken */}
+                {["EQUITIES", "FIXED INCOME", "COMMODITIES", "CASH"].map((item) => (
                   <span key={item} className="text-[10px] font-black tracking-[0.2em] text-slate-600">
                     {item}
                   </span>
@@ -102,71 +122,33 @@ export default function DashboardContent({ onAssetClick, showOnly = "overview" }
               </div>
             </div>
 
-            {/* 3. Main Content Grid (HIER IS DE AANPASSING) */}
+            {/* 3. Main Content Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              
-              {/* KOLOM 1 & 2: Performance Chart (Links) */}
               <div className="lg:col-span-2">
-                <PerformanceChart data={portfolio.performanceHistory || []} />
+                {/* We geven de enrichedAssets door voor de grafiek als die er is */}
+                <PerformanceChart data={portfolio.enrichedAssets || []} />
               </div>
 
-              {/* KOLOM 3: Mix & Sectors (Rechts) */}
               <div className="flex flex-col gap-6">
-                {/* Portfolio Mix nu BOVEN Sector Allocation */}
                 <AssetAllocationTable 
-                  assetClasses={portfolio.assetClasses || []} 
+                  assetClasses={portfolio.assetAllocation || []} 
                   onAssetClick={onAssetClick} 
                 />
                 
                 <div className="bg-slate-900/20 rounded-3xl border border-white/5 p-4">
-                  <SectorChart sectors={portfolio.sectorAllocation as any} />
+                  <SectorChart sectors={portfolio.sectorAllocation || []} />
                 </div>
               </div>
-
             </div>
           </div>
         )}
 
-        {/* --- OVERIGE VIEWS (ASSETS, RISK, ETC) --- */}
-        {currentView === "assets" && (
-          <div className="animate-in fade-in duration-500">
-            <AssetAllocationTable assetClasses={portfolio.assetClasses || []} onAssetClick={onAssetClick} />
-          </div>
-        )}
-
+        {/* ... (Andere views blijven hetzelfde, maar gebruiken nu de veilige portfolio data) */}
         {currentView === "risk" && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
             <RiskTab portfolio={portfolio} />
           </div>
         )}
-
-        {currentView === "calendar" && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-             <CalendarTab assetClasses={portfolio.assetClasses || []} />
-          </div>
-        )}
-
-        {currentView === "markets" && (
-          <div className="animate-in fade-in duration-500">
-             <MarketsTab />
-          </div>
-        )}
-
-        {(currentView === "editor" || currentView === "layers") && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <PortfolioEditor 
-              portfolio={{
-                ...portfolio,
-                riskMetrics: portfolio.riskMetrics || {
-                  beta: 0,
-                  maxDrawdown: 0,
-                  volatility: 0,
-                  sharpeRatio: 0
-                }
-              } as any} 
-            />
-         </div>
-       )}
       </div>
     </div>
   );

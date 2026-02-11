@@ -1,4 +1,4 @@
-import { deafaultPortfolio } from "../data/constants/defaultPortfolio";
+import { deafaultPortfolio } from "../data/constants/defaultHolding";
 import { 
   PortfolioItem, 
   EnrichedHolding, 

@@ -4,90 +4,99 @@ import {
   Cell,
   ResponsiveContainer,
   Tooltip,
-  Legend
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { Sector } from "@/types/dashboard";
+// We importeren het type dat de engine daadwerkelijk uitspuugt
+import { EnrichedAssetSector } from "@/types";
 
 interface SectorChartProps {
-  sectors: Sector[];
+  sectors: EnrichedAssetSector[];
 }
 
-const COLORS = [
-  "#3B82F6", // Blue
-  "#10B981", // Emerald
-  "#8B5CF6", // Violet
-  "#F59E0B", // Amber
-  "#EC4899", // Pink
-  "#06B6D4", // Cyan
-  "#F97316", // Orange
-  "#6366F1", // Indigo
+// We gebruiken de kleuren die we in de engine hebben gedefinieerd voor consistentie,
+// of vallen terug op deze array als de engine geen kleur meegeeft.
+const FALLBACK_COLORS = [
+  "#3B82F6", "#10B981", "#8B5CF6", "#F59E0B", "#EC4899", "#06B6D4",
 ];
 
 const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
-    const data = payload[0].payload as Sector;
+    const data = payload[0].payload as EnrichedAssetSector;
     return (
-      <div className="bg-slate-900 border border-slate-700 p-2 rounded shadow-lg">
-        <p className="text-white text-xs font-medium">{data.name}</p>
-        <p className="text-blue-400 font-mono text-xs">{data.percentage}%</p>
+      <div className="bg-slate-900/95 border border-slate-700/50 p-2 rounded-lg shadow-xl backdrop-blur-md">
+        <p className="text-white text-[10px] font-bold uppercase tracking-wider mb-1">{data.name}</p>
+        <p className="text-blue-400 font-mono text-xs font-bold">
+          {data.allocation_percent?.toFixed(1)}%
+        </p>
+        <p className="text-slate-500 text-[9px] mt-1 italic">
+          {data.holding_count} posities
+        </p>
       </div>
     );
   }
   return null;
 };
 
-export default function SectorChart({ sectors }: SectorChartProps) {
+export default function SectorChart({ sectors = [] }: SectorChartProps) {
+  // Filter sectoren zonder waarde om rommel in de chart te voorkomen
+  const activeSectors = sectors.filter(s => (s.allocation_percent ?? 0) > 0);
+
   return (
-    <Card className="bg-slate-900/40 border-slate-800">
-      <CardHeader>
-        <CardTitle className="text-white text-base">Sector Allocatie</CardTitle>
+    <Card className="bg-transparent border-none shadow-none">
+      <CardHeader className="p-0 mb-4">
+        <CardTitle className="text-white text-[11px] font-black uppercase tracking-[0.2em] italic opacity-80">
+          Sector Distributie
+        </CardTitle>
       </CardHeader>
-      <CardContent className="h-[300px] flex items-center">
-        <div className="w-1/2 h-full">
+      <CardContent className="p-0 flex items-center gap-4">
+        {/* De Pie Chart */}
+        <div className="w-[140px] h-[140px] shrink-0">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
-                data={sectors}
+                data={activeSectors}
                 cx="50%"
                 cy="50%"
-                innerRadius={60}
-                outerRadius={80}
-                paddingAngle={5}
-                dataKey="percentage"
+                innerRadius={45}
+                outerRadius={65}
+                paddingAngle={4}
+                // FIX: Gebruik allocation_percent ipv percentage
+                dataKey="allocation_percent"
+                stroke="none"
               >
-                {sectors.map((_, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="none" />
+                {activeSectors.map((entry, index) => (
+                  <Cell 
+                    key={`cell-${index}`} 
+                    // Gebruik de kleur uit de engine (als die er is)
+                    fill={entry.color || FALLBACK_COLORS[index % FALLBACK_COLORS.length]} 
+                  />
                 ))}
               </Pie>
               <Tooltip content={<CustomTooltip />} />
             </PieChart>
           </ResponsiveContainer>
         </div>
-        <div className="w-1/2 space-y-2">
-          {sectors.map((sector, index) => (
+
+        {/* De Legenda */}
+        <div className="flex-1 space-y-2 max-h-[160px] overflow-y-auto pr-2 custom-scrollbar">
+          {activeSectors.map((sector, index) => (
             <div key={index} className="flex items-center justify-between group cursor-default">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 min-w-0">
                 <div 
-                  className="w-2 h-2 rounded-full"
-                  style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                  className="w-1.5 h-1.5 rounded-full shrink-0"
+                  style={{ backgroundColor: sector.color || FALLBACK_COLORS[index % FALLBACK_COLORS.length] }}
                 />
-                <span className="text-[11px] text-slate-400 group-hover:text-slate-200 transition-colors">
+                <span className="text-[10px] text-slate-500 group-hover:text-slate-200 transition-colors truncate">
                   {sector.name}
                 </span>
               </div>
-              <span className="text-[11px] font-mono text-slate-500 group-hover:text-white">
-                {sector.percentage}%
+              <span className="text-[10px] font-mono font-bold text-slate-600 group-hover:text-blue-400 transition-colors">
+                {sector.allocation_percent?.toFixed(1)}%
               </span>
             </div>
           ))}
         </div>
       </CardContent>
-      <style>{`
-        .recharts-pie-sector:focus {
-          outline: none;
-        }
-      `}</style>
     </Card>
   );
 }
