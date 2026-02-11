@@ -3,7 +3,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Grid3X3, AlertCircle, Info } from "lucide-react";
-import CorrelationMatrix from "./CorrelationMatrix";
+import CorrelationMatrix from "./correlationMatrix";
 import { Portfolio } from "@/types/dashboard"; // Zorg dat dit pad klopt
 
 interface CorrelationsTabProps {

@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/table";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { cn } from "@/lib/utils";
-import PortfolioEditor from "./PortfolioEditor"; // Zorg dat dit pad klopt
+import PortfolioEditor from "../shared/portfolioEditor"; // Zorg dat dit pad klopt
 
 // --- HELPERS ---
 const formatCurrency = (val: number) => {

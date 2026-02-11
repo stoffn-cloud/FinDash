@@ -1,10 +1,10 @@
 'use client';
 
-import DashboardContent from "@/components/dashboard/DashboardContent";
-import CorrelationsTab from "@/components/dashboard/CorrelationsTab";
-import StrategyTab from "@/components/dashboard/StrategyTab";
-import CalculationsTab from "@/components/dashboard/CalculationsTab";
-import RiskTab from "@/components/dashboard/RiskTab"; // Indien dit een apart bestand is
+import DashboardContent from "@/components/features/overviewTab/dashboardContent";
+import CorrelationsTab from "@/components/features/correlationsTab/correlationsTab";
+import StrategyTab from "@/components/features/strategyTab/strategyTab";
+import CalculationsTab from "@/components/features/calculationsTab/calculationsTab";
+import RiskTab from "@/components/features/riskTab/riskTab"; // Indien dit een apart bestand is
 import { PortfolioItem } from "@/types";
 
 interface TabRendererProps {

@@ -8,13 +8,13 @@ import {
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import PerformanceChart from "./PerformanceChart";
-import SectorChart from "./SectorChart";
-import AssetAllocationTable from "./AssetAllocationTable";
-import RiskTab from "./RiskTab";
-import MarketsTab from "./MarketsTab";
-import CalendarTab from "./CalendarTab";
-import PortfolioEditor from "./PortfolioEditor";
+import PerformanceChart from "./performanceChart";
+import SectorChart from "./sectorChart";
+import AssetAllocationTable from "./assetAllocationTable";
+import RiskTab from "../riskTab/riskTab";
+import MarketsTab from "../marketsTab/marketsTab";
+import CalendarTab from "../calendarTab/calendarTab";
+import PortfolioEditor from "../shared/portfolioEditor";
 import { cn } from "@/lib/utils";
 
 import { usePortfolio } from "@/store/portfolioStore";

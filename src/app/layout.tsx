@@ -1,7 +1,7 @@
 // src/app/layout.tsx
 import "./globals.css";
 import { Inter } from "next/font/google"; // De moderne manier voor fonts
-import Providers from "@/components/Providers";
+import Providers from "@/components/providers";
 
 // 1. Hier komt je titel en meta-data (vervangt <title>)
 export const metadata = {

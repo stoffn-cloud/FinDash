@@ -6,7 +6,7 @@ import Sidebar from "@/components/layout/sidebar";
 import PageHeader from "@/components/layout/pageHeader";
 import TabRenderer from "@/components/layout/tabRenderer";
 import Footer from "@/components/layout/footer";
-import AssetClassDetail from "@/components/dashboard/AssetClassDetail";
+import AssetClassDetail from "@/components/features/overviewTab/assetClassDetail";
 import { PortfolioItem } from "@/types";
 
 export default function DashboardPage() {
