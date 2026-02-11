@@ -1,3 +1,4 @@
+'use client';
 
 import { PortfolioItem } from "@/types";
 import { useEffect, useState } from "react";
@@ -46,30 +47,39 @@ import CorrelationsTab from "@/components/dashboard/CorrelationsTab";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
+'use client'; // CRUCIAAL: Voeg dit bovenaan toe!
+
+import { PortfolioItem } from "@/types";
+import { useEffect, useState } from "react";
+// ... rest van je imports ...
+
 export default function Dashboard() {
-// 1. Nieuwe states voor je echte data
     const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
     const [isFetching, setIsFetching] = useState(false);
+    const [activeTab, setActiveTab] = useState("Overview");
+    const [selectedAsset, setSelectedAsset] = useState<PortfolioItem | null>(null);
+    const [selectedAssetClass, setSelectedAssetClass] = useState<string | null>(null); // Toegevoegd
 
-// 2. De functie die met je SQL-backend praat
     const handleRefetch = async () => {
        setIsFetching(true);
        try {
-    const response = await fetch('http://localhost:3001/api/portfolio/assets');
-       if (!response.ok) throw new Error('Netwerk response was niet ok');
-    const data = await response.json();
-       setPortfolio(data); // Je SQL data zit nu in je dashboard!
+         // Verander naar het lokale Next.js endpoint
+         const response = await fetch('/api/portfolio/assets'); 
+         if (!response.ok) throw new Error('Netwerk response was niet ok');
+         const data = await response.json();
+         setPortfolio(data);
        } catch (error) {
-    console.error("Sync fout:", error);
-  } finally {
-    setIsFetching(false);
-  }
-};
+         console.error("Sync fout:", error);
+       } finally {
+         setIsFetching(false);
+       }
+    };
 
-// 1. Haal data op bij het laden van de pagina
-useEffect(() => {
-  handleRefetch();
-}, []);
+    useEffect(() => {
+      handleRefetch();
+    }, []);
+
+    // ... rest van je logica ...
 
 // 2. Navigatie tussen tabs (Overview, Risk, etc.)
 const [activeTab, setActiveTab] = useState("Overview");
