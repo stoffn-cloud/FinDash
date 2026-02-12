@@ -3,6 +3,24 @@ import { z } from "zod";
 // Helper om MySQL TINYINT (0/1) naar Boolean te vertalen
 const mysqlBoolean = z.number().transform((val) => val === 1);
 
+// --- HOLDINGS (De rauwe data uit de database of adapter)
+export const RawHoldingSchema = z.object({
+  ticker_id: z.number(),
+  quantity: z.number(),
+  purchase_price: z.number(),
+  purchase_date: z.string(), // SQL DATE komt binnen als string 'YYYY-MM-DD'
+});
+
+/**
+ * RawHolding: De machine-leesbare link tussen een transactie en een asset.
+ * Wordt gebruikt als input voor de Portfolio Engine.
+ */
+export type RawHolding = z.infer<typeof RawHoldingSchema>;
+
+// Optioneel: Als je vaker met lijstjes holdings werkt
+export type RawPortfolio = RawHolding[];
+
+
 // --- ASSETS
 export const AssetSchema = z.object({
   ticker_id: z.number(),

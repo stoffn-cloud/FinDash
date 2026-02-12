@@ -1,12 +1,21 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 
 export async function GET() {
   try {
-    // We halen de ruwe assets op uit jouw 'assets' tabel
-    const [rows] = await db.execute('SELECT * FROM assets');
-    return NextResponse.json(rows);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    // We halen alle asset classes op en sorteren ze alfabetisch op naam
+    const assetClasses = await prisma.asset_classes.findMany({
+      orderBy: {
+        asset_class: 'asc',
+      },
+    });
+
+    return NextResponse.json(assetClasses);
+  } catch (error) {
+    console.error("Fout bij ophalen asset classes:", error);
+    return NextResponse.json(
+      { error: "Kon asset classes niet ophalen uit de database" },
+      { status: 500 }
+    );
   }
 }

@@ -1,0 +1,160 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model OHLCV_history {
+  ticker_id   Int
+  date_id     DateTime @db.Date
+  open_price  Decimal  @db.Decimal(15, 2)
+  high_price  Decimal  @db.Decimal(15, 2)
+  low_price   Decimal  @db.Decimal(15, 2)
+  close_price Decimal  @db.Decimal(15, 2)
+  Volume      Int?
+  assets      assets   @relation(fields: [ticker_id], references: [ticker_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_OHLCV_assets")
+  date_dim    date_dim @relation(fields: [date_id], references: [date_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_OHLCV_date")
+
+  @@id([ticker_id, date_id])
+  @@index([date_id], map: "fk_OHLCV_date_idx")
+}
+
+model asset_classes {
+  asset_classes_id Int      @id
+  asset_class      String   @db.VarChar(45)
+  description      String   @db.VarChar(100)
+  assets           assets[]
+}
+
+model asset_industries {
+  asset_industries_id Int           @id
+  asset_sectors_id    Int
+  description         String        @db.VarChar(45)
+  asset_sectors       asset_sectors @relation(fields: [asset_sectors_id], references: [asset_sectors_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_ind_sector")
+  assets              assets[]
+
+  @@index([asset_sectors_id], map: "fk_ind_sector")
+}
+
+model asset_sectors {
+  asset_sectors_id Int                @id
+  GICS_name        String             @db.VarChar(45)
+  description      String             @db.VarChar(45)
+  asset_industries asset_industries[]
+}
+
+model assets {
+  ticker_id           Int                   @id @default(autoincrement())
+  ticker              String                @db.VarChar(45)
+  full_name           String                @db.VarChar(100)
+  ISIN                String                @db.VarChar(45)
+  markets_id          Int
+  asset_classes_id    Int
+  currencies_id       Int
+  asset_industries_id Int
+  countries_id        Int
+  OHLCV_history       OHLCV_history[]
+  asset_classes       asset_classes         @relation(fields: [asset_classes_id], references: [asset_classes_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_assets_classes")
+  countries           countries             @relation(fields: [countries_id], references: [countries_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_assets_countries")
+  currencies          currencies            @relation(fields: [currencies_id], references: [currencies_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_assets_currencies")
+  asset_industries    asset_industries      @relation(fields: [asset_industries_id], references: [asset_industries_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_assets_industries")
+  markets             markets               @relation(fields: [markets_id], references: [markets_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_assets_markets")
+  performance_history performance_history[]
+
+  @@index([asset_classes_id], map: "fk_assets_classes")
+  @@index([countries_id], map: "fk_assets_countries")
+  @@index([currencies_id], map: "fk_assets_currencies")
+  @@index([asset_industries_id], map: "fk_assets_industries")
+  @@index([markets_id], map: "fk_assets_markets")
+}
+
+model countries {
+  countries_id Int      @id
+  regions_id   Int
+  ISO_code     String   @db.VarChar(5)
+  full_name    String   @db.VarChar(45)
+  assets       assets[]
+  regions      regions  @relation(fields: [regions_id], references: [regions_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_count_region")
+
+  @@index([regions_id], map: "fk_count_region")
+}
+
+model currencies {
+  currencies_id    Int                @id
+  ISO_code         String             @db.VarChar(5)
+  full_name        String             @db.VarChar(45)
+  assets           assets[]
+  currency_history currency_history[]
+}
+
+model currency_history {
+  currencies_id Int
+  date_id       DateTime   @db.Date
+  exchange_rate Decimal    @db.Decimal(15, 8)
+  currencies    currencies @relation(fields: [currencies_id], references: [currencies_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_currencies_curhist")
+  date_dim      date_dim   @relation(fields: [date_id], references: [date_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_date_curhist")
+
+  @@id([currencies_id, date_id])
+  @@index([date_id], map: "fk_date_curhist_idx")
+}
+
+model date_dim {
+  date_id              DateTime              @id @db.Date
+  year                 Int
+  quarter              Int
+  quarter_abbreviation String                @db.VarChar(2)
+  month                Int
+  month_name           String                @db.VarChar(45)
+  day                  Int
+  day_name             String                @db.VarChar(45)
+  day_of_week          Int
+  is_weekend           Int                   @db.TinyInt
+  is_quarter_end       Int                   @db.TinyInt
+  is_year_end          Int                   @db.TinyInt
+  OHLCV_history        OHLCV_history[]
+  currency_history     currency_history[]
+  markets_calendar     markets_calendar[]
+  performance_history  performance_history[]
+}
+
+model markets {
+  markets_id           Int                @id
+  markets_abbreviation String             @db.VarChar(10)
+  full_name            String             @db.VarChar(45)
+  assets               assets[]
+  markets_calendar     markets_calendar[]
+}
+
+model markets_calendar {
+  markets_id    Int
+  date          DateTime @db.Date
+  is_open       Int?     @db.TinyInt
+  market_status String   @db.VarChar(45)
+  reason        String   @db.VarChar(100)
+  date_dim      date_dim @relation(fields: [date], references: [date_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_date_markcal")
+  markets       markets  @relation(fields: [markets_id], references: [markets_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_markets_markcal")
+
+  @@id([markets_id, date])
+  @@index([date], map: "fk_date_markcal_idx")
+}
+
+model performance_history {
+  ticker_id  Int
+  date_id    DateTime @db.Date
+  return_pct Decimal  @db.Decimal(10, 6)
+  assets     assets   @relation(fields: [ticker_id], references: [ticker_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_perf_assets")
+  date_dim   date_dim @relation(fields: [date_id], references: [date_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_perf_date")
+
+  @@id([ticker_id, date_id])
+  @@index([date_id], map: "fk_perf_date_idx")
+}
+
+model regions {
+  regions_id  Int         @id
+  region_code String      @db.VarChar(10)
+  description String      @db.VarChar(45)
+  countries   countries[]
+}

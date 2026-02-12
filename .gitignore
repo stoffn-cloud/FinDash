@@ -36,3 +36,4 @@ build/
 
 # Databases
 *.sqlite
+/generated/prisma

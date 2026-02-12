@@ -29,6 +29,6 @@
     ".next/types/**/*.ts",
     "src/**/*.ts", 
     "src/**/*.tsx"
-  ],
+, "src/logic/core"  ],
   "exclude": ["node_modules"]
 }

@@ -1,7 +1,8 @@
 import { Market, EnrichedMarket, EnrichedHolding } from "@/types";
+import { calcWeight } from "../core/math";
 
 /**
- * Berekent de verdeling van de portefeuille over de verschillende aandelenmarkten/beurzen.
+ * Berekent de verdeling van de portefeuille over de verschillende aandelenmarkten.
  */
 export const calculateMarketAllocation = (
   dbMarkets: Market[],
@@ -9,13 +10,11 @@ export const calculateMarketAllocation = (
   totalValue: number
 ): EnrichedMarket[] => {
   return dbMarkets
-    .map((m) => {
-      // Filter alle holdings die genoteerd staan op deze specifieke markt
+    .map((m, idx) => {
       const holdingsInMarket = holdings.filter(
         (h) => h.markets_id === m.markets_id
       );
 
-      // Bereken de totale waarde op deze beurs
       const marketValue = holdingsInMarket.reduce(
         (sum, h) => sum + h.marketValue, 
         0
@@ -26,12 +25,13 @@ export const calculateMarketAllocation = (
         id: m.markets_id,
         name: m.full_name,
         current_value: marketValue,
-        allocation_percent: totalValue > 0 ? (marketValue / totalValue) * 100 : 0,
+        // Gebruik de centrale helper voor consistentie
+        allocation_percent: calcWeight(marketValue, totalValue),
         holding_count: holdingsInMarket.length,
+        // Voeg een dynamische kleur toe voor je charts
+        color: `hsl(210, 70%, ${30 + (idx * 15) % 50}%)` 
       };
     })
-    // Verwijder markten waar je momenteel niets in bezit hebt (houdt de UI clean)
     .filter((market) => market.current_value > 0)
-    // Sorteer van grootste naar kleinste weging
     .sort((a, b) => b.current_value - a.current_value);
 };

@@ -1,12 +1,33 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 
 export async function GET() {
   try {
-    // We gebruiken de exacte tabelnaam uit je EER-model
-    const [rows] = await db.execute('SELECT * FROM OHLCV_history ORDER BY date_id DESC LIMIT 100');
-    return NextResponse.json(rows);
+    // Prisma vertaalt 'OHLCV_history' naar 'oHLCV_history' (let op de kleine 'o')
+    // of soms 'ohlcv_history' afhankelijk van de interne generatie.
+    // We gebruiken 'findMany' met een limit (take) en sortering (orderBy).
+    
+    const history = await prisma.oHLCV_history.findMany({
+      take: 100, // De 'LIMIT 100' uit je SQL voorbeeld
+      orderBy: {
+        date_id: 'desc' // Nieuwste data eerst
+      },
+      include: {
+        assets: {
+          select: {
+            ticker: true,
+            full_name: true
+          }
+        }
+      }
+    });
+
+    return NextResponse.json(history);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Fout bij ophalen OHLCV data:", error);
+    return NextResponse.json(
+      { error: error.message || "Kon OHLCV geschiedenis niet ophalen" }, 
+      { status: 500 }
+    );
   }
 }
