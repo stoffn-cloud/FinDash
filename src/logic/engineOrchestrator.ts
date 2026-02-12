@@ -8,7 +8,7 @@ import {
 
 // 1. Controleer of deze paden exact kloppen met je mappenstructuur
 import { enrichAssets } from "./portfolio/assetEngine";
-import { enrichUserHoldings } from "./portfolio/holdingsEngine"; 
+import { enrichUserHoldings } from "./holdings/holdingsEngine"; 
 import { calculateStats } from "./portfolio/statsEngine";
 
 // 2. De allocatie imports (die ontbraken in je foutmelding)

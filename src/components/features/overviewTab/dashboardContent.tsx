@@ -16,24 +16,24 @@ import AssetAllocationTable from "./assetAllocationTable";
 import RiskTab from "../riskTab/riskTab";
 import { cn } from "@/lib/utils";
 
-import { usePortfolio } from "@/store/store";
-import type { AssetClass } from "@/types/index"; 
+// CORRECTE IMPORTS
+import { usePortfolioStore } from "@/store/enrichedData/useSnapshotPortfolioStore";
+import { Portfolio, EnrichedHolding, EnrichedAssetClass } from "@/types"; 
 
 interface DashboardContentProps {
-  onAssetClick: (asset: AssetClass) => void;
+  portfolio: Portfolio;
+  onAssetClick: (ac: EnrichedAssetClass) => void; 
   showOnly?: string; 
 }
 
-export default function DashboardContent({ onAssetClick, showOnly = "overview" }: DashboardContentProps) {
-  // --- 1. HOOKS ALTIJD BOVENAAN (ONVOORWAARDELIJK) ---
-  const { portfolio, loading } = usePortfolio();
-  const [searchQuery, setSearchQuery] = useState("");
+export default function DashboardContent({ portfolio, onAssetClick, showOnly = "overview" }: DashboardContentProps) {
+  const isInitialised = usePortfolioStore((state) => state.isInitialised);
   const currentView = showOnly?.toLowerCase().trim();
 
-  // Verplaats useMemo naar boven de 'if (loading)' check
   const metrics = useMemo(() => {
-    // Geef default waarden terug als portfolio nog null is
-    if (!portfolio) return [];
+    if (!portfolio || !portfolio.stats) return [];
+
+    const { stats } = portfolio;
 
     return [
       {
@@ -42,55 +42,53 @@ export default function DashboardContent({ onAssetClick, showOnly = "overview" }
           style: 'currency', 
           currency: 'USD', 
           notation: 'compact' 
-        }).format(portfolio.totalValue || 0),
-        change: `+${portfolio.stats?.total_assets || 0} Assets`, 
+        }).format(stats.total_value || 0), // Gebruik snake_case van de engine
+        change: `+${stats.total_assets || 0} Assets`, 
         trend: "up",
         icon: DollarSign,
       },
       {
         label: "Markten",
-        value: portfolio.stats?.unique_markets?.toString() || "0",
+        value: stats.unique_markets?.toString() || "0",
         change: "Global",
         trend: "up",
         icon: ArrowUpRight,
       },
       {
         label: "Sectoren",
-        value: portfolio.stats?.unique_sectors?.toString() || "0",
+        value: stats.unique_sectors?.toString() || "0",
         change: "GICS",
         trend: "up",
         icon: Activity,
       },
       {
         label: "Trackers vs Stocks",
-        value: `${portfolio.stats?.tracker_count || 0} / ${portfolio.stats?.stock_count || 0}`,
+        value: `${stats.tracker_count || 0} / ${stats.stock_count || 0}`,
         change: "Mix",
-        trend: "down",
+        trend: stats.stock_count > stats.tracker_count ? "up" : "down",
         icon: ShieldAlert,
       }
     ];
   }, [portfolio]);
 
-  // --- 2. CONDITIONAL RENDERING (PAS NA DE HOOKS) ---
-  if (loading || !portfolio) {
+  // Loading state (indien de parent nog niet klaar is)
+  if (!isInitialised || !portfolio) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
         <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
         <p className="text-slate-400 font-mono text-[10px] uppercase tracking-[0.2em] animate-pulse">
-          Connecting to SQL Engine...
+          Processing Engine Data...
         </p>
       </div>
     );
   }
 
-  // --- 3. ACTUAL UI RENDER ---
   return (
     <div className="space-y-6">
       <div className="space-y-8">
-
-        {/* --- VIEW: DASHBOARD OVERVIEW --- */}
         {currentView === "overview" && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            
             {/* 1. Top Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {metrics.map((metric, i) => (
@@ -114,7 +112,7 @@ export default function DashboardContent({ onAssetClick, showOnly = "overview" }
               ))}
             </div>
 
-            {/* 2. Ticker Bar */}
+            {/* 2. Ticker Bar - Statisch voor sfeer */}
             <div className="flex justify-center border-y border-white/5 py-3 bg-white/[0.01]">
               <div className="inline-flex items-center gap-12 overflow-hidden">
                 {["EQUITIES", "FIXED INCOME", "COMMODITIES", "CASH"].map((item) => (
@@ -128,10 +126,12 @@ export default function DashboardContent({ onAssetClick, showOnly = "overview" }
             {/* 3. Main Content Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2">
-                <PerformanceChart data={portfolio.enrichedAssets || []} />
+                {/* Geef de verrijkte holdings door voor de chart */}
+                <PerformanceChart data={portfolio.holdings || []} />
               </div>
 
               <div className="flex flex-col gap-6">
+                {/* De Tabel voor Asset Classes gebruikt nu de geaggregeerde allocatie data */}
                 <AssetAllocationTable 
                   assetClasses={portfolio.assetAllocation || []} 
                   onAssetClick={onAssetClick} 

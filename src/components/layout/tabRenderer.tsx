@@ -4,13 +4,13 @@ import DashboardContent from "@/components/features/overviewTab/dashboardContent
 import CorrelationsTab from "@/components/features/correlationsTab/correlationsTab";
 import StrategyTab from "@/components/features/strategyTab/strategyTab";
 import CalculationsTab from "@/components/features/calculationsTab/calculationsTab";
-import RiskTab from "@/components/features/riskTab/riskTab"; // Indien dit een apart bestand is
-import { PortfolioItem } from "@/types";
+import RiskTab from "@/components/features/riskTab/riskTab";
+import { Portfolio, EnrichedHolding } from "@/types"; // PortfolioItem is nu Portfolio
 
 interface TabRendererProps {
   activeTab: string;
-  portfolio: PortfolioItem[];
-  onAssetClick: (asset: any) => void;
+  portfolio: Portfolio; // Het volledige berekende object
+  onAssetClick: (asset: EnrichedHolding) => void;
 }
 
 export default function TabRenderer({ activeTab, portfolio, onAssetClick }: TabRendererProps) {
