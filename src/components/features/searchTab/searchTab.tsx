@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Search, Loader2, TrendingUp, TrendingDown, Globe, Zap } from 'lucide-react';
-import { portfolioStore } from '@/store/portfolioStore';
+import { portfolioStore } from '@/store/store';
 import { motion, AnimatePresence } from "framer-motion";
 
 const SearchTab = () => {

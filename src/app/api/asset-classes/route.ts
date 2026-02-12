@@ -3,7 +3,8 @@ import { db } from '@/lib/db';
 
 export async function GET() {
   try {
-    const [rows] = await db.execute('SELECT * FROM asset_classes');
+    // We halen de ruwe assets op uit jouw 'assets' tabel
+    const [rows] = await db.execute('SELECT * FROM assets');
     return NextResponse.json(rows);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

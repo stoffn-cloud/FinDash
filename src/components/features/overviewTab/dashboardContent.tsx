@@ -16,7 +16,7 @@ import AssetAllocationTable from "./assetAllocationTable";
 import RiskTab from "../riskTab/riskTab";
 import { cn } from "@/lib/utils";
 
-import { usePortfolio } from "@/store/portfolioStore";
+import { usePortfolio } from "@/store/store";
 import type { AssetClass } from "@/types/index"; 
 
 interface DashboardContentProps {
