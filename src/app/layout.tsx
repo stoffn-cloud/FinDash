@@ -1,19 +1,16 @@
 // src/app/layout.tsx
 import "./globals.css";
-import { Inter } from "next/font/google"; // De moderne manier voor fonts
+import { Inter } from "next/font/google";
 import Providers from "@/components/providers";
 
-// 1. Hier komt je titel en meta-data (vervangt <title>)
 export const metadata = {
   title: "Quantum Alpha | Terminal",
   description: "Advanced Portfolio Analytics",
 };
 
-// 2. Configureer het Inter font
 const inter = Inter({ 
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  variable: "--font-inter", // Zo kun je het in CSS gebruiken
+  variable: "--font-inter",
 });
 
 export default function RootLayout({
@@ -22,8 +19,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={inter.variable}>
-      <body className={`${inter.className} antialiased bg-[#020617]`}>
+    // 'dark' is essentieel voor Shadcn/UI componenten op een zwarte achtergrond
+    <html lang="en" className={`${inter.variable} dark`} style={{ colorScheme: 'dark' }}>
+      <body className={`${inter.className} antialiased bg-[#020617] text-slate-200 min-h-screen`}>
         <Providers>
           {children}
         </Providers>

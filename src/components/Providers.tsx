@@ -1,4 +1,4 @@
-"use client"; // Belangrijk in Next.js!
+"use client";
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';

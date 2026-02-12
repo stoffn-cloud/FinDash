@@ -7,50 +7,39 @@ import PageHeader from "@/components/layout/pageHeader";
 import TabRenderer from "@/components/layout/tabRenderer";
 import Footer from "@/components/layout/footer";
 import AssetClassDetail from "@/components/features/overviewTab/assetClassDetail";
-
 import { usePortfolioStore } from "@/store/enrichedData/useSnapshotPortfolioStore";
-import { portfolioService } from "@/lib/api/portfolioService";
 
 export default function DashboardPage() {
-  // 1. Store state & actions
-  const { portfolio, isInitialised, updatePortfolio } = usePortfolioStore();
+  const { portfolio, isInitialised } = usePortfolioStore();
   
-  // 2. UI states
   const [activeTab, setActiveTab] = useState("Overview");
   const [isFetching, setIsFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedAssetClass, setSelectedAssetClass] = useState<string | null>(null);
 
-  /**
-   * REFRESH DATA
-   * Ingepakt in useCallback om referentiële stabiliteit te behouden
-   */
   const refreshData = useCallback(async () => {
     setIsFetching(true);
     setError(null);
     try {
-      const data = await portfolioService.fetchAllData();
+      const response = await fetch('/api/portfolio');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || `Server error: ${response.status}`);
+      }
+      const berekendPortfolio = await response.json();
       
-      updatePortfolio(
-        data.assets,
-        data.classes,
-        data.sectors,
-        data.industries,
-        data.currencies,
-        data.regions,
-        data.countries,
-        data.markets,
-        data.prices
-      );
-    } catch (err) {
-      console.error("❌ Data Fetch Error:", err);
-      setError("Kon de portfolio data niet ophalen. Controleer de database verbinding.");
+      usePortfolioStore.setState({ 
+        portfolio: berekendPortfolio, 
+        isInitialised: true 
+      });
+    } catch (err: any) {
+      console.error("❌ Fetch Error:", err);
+      setError(err.message || "Kon de data niet ophalen.");
     } finally {
       setIsFetching(false);
     }
-  }, [updatePortfolio]);
+  }, []);
 
-  // Auto-fetch bij eerste mount
   useEffect(() => {
     if (!isInitialised) {
       refreshData();
@@ -58,59 +47,67 @@ export default function DashboardPage() {
   }, [isInitialised, refreshData]);
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-200 selection:bg-blue-500/30 font-sans">
+    // 'flex' op de root div zorgt ervoor dat Sidebar en de rest naast elkaar staan
+    <div className="flex min-h-screen bg-[#020617] text-slate-200 font-sans selection:bg-blue-500/30 overflow-hidden">
+      
       {/* Background Decor */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-blue-500/10 blur-[120px] rounded-full" />
         <div className="absolute top-[20%] -right-[10%] w-[30%] h-[50%] bg-emerald-500/5 blur-[120px] rounded-full" />
       </div>
 
-      <Header isFetching={isFetching} onRefresh={refreshData} />
-      
-      <div className="flex max-w-[1600px] mx-auto relative z-10">
-        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      {/* 1. SIDEBAR (Links) */}
+      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+
+      {/* 2. RECHTER KOLOM (Header + Content + Footer) */}
+      <div className="flex-1 flex flex-col min-w-0 relative z-10 overflow-y-auto h-screen">
         
-        <main className="flex-1 p-4 lg:p-8 min-w-0">
-          <div className="max-w-6xl mx-auto space-y-6">
+        {/* Header bovenaan de rechter kolom */}
+        <Header isFetching={isFetching} onRefresh={refreshData} />
+        
+        <main className="flex-1 p-6 lg:p-10">
+          <div className="max-w-[1400px] mx-auto space-y-8">
             <PageHeader 
               activeTab={activeTab} 
               isFetching={isFetching} 
               onRefresh={refreshData}
-              onAddAsset={() => console.log("Open Add Asset Modal")} 
+              onAddAsset={() => console.log("Open Modal")} 
             />
             
-            {/* Error State Display */}
             {error && (
-              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
-                {error}
+              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs font-mono animate-in fade-in duration-300">
+                <span className="font-bold uppercase tracking-widest mr-2">[Error]</span> {error}
               </div>
             )}
 
-            {/* Main Content Area */}
+            {/* Content Switch */}
             {isInitialised && portfolio ? (
-              <TabRenderer 
-                activeTab={activeTab} 
-                portfolio={portfolio} 
-                onAssetClick={(asset) => console.log("Geselecteerd:", asset)} 
-              />
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <TabRenderer 
+                  activeTab={activeTab} 
+                  portfolio={portfolio} 
+                  onAssetClick={(ac) => setSelectedAssetClass(ac.asset_class)} 
+                />
+              </div>
             ) : (
-              // Verbeterde Loader met Skeleton-feel
-              <div className="flex flex-col items-center justify-center h-[50vh] space-y-4">
-                <div className="relative w-16 h-16">
-                  <div className="absolute inset-0 border-4 border-blue-500/20 rounded-full"></div>
-                  <div className="absolute inset-0 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              <div className="flex flex-col items-center justify-center h-[50vh] space-y-6">
+                <div className="relative w-20 h-20">
+                  <div className="absolute inset-0 border-2 border-blue-500/10 rounded-2xl" />
+                  <div className="absolute inset-0 border-2 border-blue-500 border-t-transparent rounded-2xl animate-spin" />
                 </div>
                 <div className="text-center">
-                  <h3 className="text-lg font-medium text-slate-300">Portfolio berekenen</h3>
-                  <p className="text-slate-500 text-sm">Data wordt verwerkt door de engine...</p>
+                  <h3 className="text-white font-bold tracking-tighter uppercase italic">Engine Pulse</h3>
+                  <p className="text-slate-500 text-[10px] font-mono uppercase tracking-[0.3em] animate-pulse mt-2">
+                    Calibrating Analytics...
+                  </p>
                 </div>
               </div>
             )}
           </div>
         </main>
-      </div>
 
-      <Footer />
+        <Footer />
+      </div>
 
       {/* Asset Class Detail Modal */}
       {selectedAssetClass && portfolio && (

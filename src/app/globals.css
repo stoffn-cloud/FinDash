@@ -1,13 +1,8 @@
 @import "tailwindcss";
 
-@theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-}
+/* Omdat je globals.css in src/app staat, moeten we omhoog kijken naar de andere mappen */
+@source "../../src/**/*.{ts,tsx}"; 
 
-/* Optioneel: zorg dat de achtergrond altijd donker is, zoals je dashboard */
-body {
-  margin: 0;
-  background-color: #020617; /* De diepblauwe/zwarte kleur van Tailwind slate-950 */
-  color: white;
-  font-family: var(--font-sans);
+@theme {
+  --font-sans: var(--font-inter);
 }
