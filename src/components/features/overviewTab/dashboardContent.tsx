@@ -1,10 +1,12 @@
+"use client";
+
 import { useState, useMemo } from "react";
 import {
   ArrowUpRight,
   DollarSign,
   Activity,
   ShieldAlert,
-  Loader2 // Importeer een loader icoon
+  Loader2
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,9 +14,6 @@ import PerformanceChart from "./performanceChart";
 import SectorChart from "./sectorChart";
 import AssetAllocationTable from "./assetAllocationTable";
 import RiskTab from "../riskTab/riskTab";
-import MarketsTab from "../marketsTab/marketsTab";
-import CalendarTab from "../calendarTab/calendarTab";
-import PortfolioEditor from "../shared/portfolioEditor";
 import { cn } from "@/lib/utils";
 
 import { usePortfolio } from "@/store/portfolioStore";
@@ -26,60 +25,65 @@ interface DashboardContentProps {
 }
 
 export default function DashboardContent({ onAssetClick, showOnly = "overview" }: DashboardContentProps) {
-  // 1. Haal ook de 'loading' status uit de hook
+  // --- 1. HOOKS ALTIJD BOVENAAN (ONVOORWAARDELIJK) ---
   const { portfolio, loading } = usePortfolio();
   const [searchQuery, setSearchQuery] = useState("");
   const currentView = showOnly?.toLowerCase().trim();
 
-  // 2. SAFETY CHECK: Als de data nog laadt of er is geen portfolio, toon een mooie loader
+  // Verplaats useMemo naar boven de 'if (loading)' check
+  const metrics = useMemo(() => {
+    // Geef default waarden terug als portfolio nog null is
+    if (!portfolio) return [];
+
+    return [
+      {
+        label: "Totaal Vermogen",
+        value: new Intl.NumberFormat('en-US', { 
+          style: 'currency', 
+          currency: 'USD', 
+          notation: 'compact' 
+        }).format(portfolio.totalValue || 0),
+        change: `+${portfolio.stats?.total_assets || 0} Assets`, 
+        trend: "up",
+        icon: DollarSign,
+      },
+      {
+        label: "Markten",
+        value: portfolio.stats?.unique_markets?.toString() || "0",
+        change: "Global",
+        trend: "up",
+        icon: ArrowUpRight,
+      },
+      {
+        label: "Sectoren",
+        value: portfolio.stats?.unique_sectors?.toString() || "0",
+        change: "GICS",
+        trend: "up",
+        icon: Activity,
+      },
+      {
+        label: "Trackers vs Stocks",
+        value: `${portfolio.stats?.tracker_count || 0} / ${portfolio.stats?.stock_count || 0}`,
+        change: "Mix",
+        trend: "down",
+        icon: ShieldAlert,
+      }
+    ];
+  }, [portfolio]);
+
+  // --- 2. CONDITIONAL RENDERING (PAS NA DE HOOKS) ---
   if (loading || !portfolio) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
         <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-        <p className="text-slate-400 font-mono text-xs uppercase tracking-[0.2em] animate-pulse">
+        <p className="text-slate-400 font-mono text-[10px] uppercase tracking-[0.2em] animate-pulse">
           Connecting to SQL Engine...
         </p>
       </div>
     );
   }
 
-  // 3. De metrics gebruiken nu veilig de data (portfolio is hier gegarandeerd niet null)
-  const metrics = useMemo(() => [
-    {
-      label: "Totaal Vermogen",
-      value: new Intl.NumberFormat('en-US', { 
-        style: 'currency', 
-        currency: 'USD', 
-        notation: 'compact' 
-      }).format(portfolio.totalValue || 0),
-      // We gebruiken optionele chaining voor de nieuwe engine velden
-      change: `+${portfolio.stats?.total_assets || 0} Assets`, 
-      trend: "up",
-      icon: DollarSign,
-    },
-    {
-      label: "Markten",
-      value: portfolio.stats?.unique_markets?.toString() || "0",
-      change: "Global",
-      trend: "up",
-      icon: ArrowUpRight,
-    },
-    {
-      label: "Sectoren",
-      value: portfolio.stats?.unique_sectors?.toString() || "0",
-      change: "GICS",
-      trend: "up",
-      icon: Activity,
-    },
-    {
-      label: "Trackers vs Stocks",
-      value: `${portfolio.stats?.tracker_count || 0} / ${portfolio.stats?.stock_count || 0}`,
-      change: "Mix",
-      trend: "down",
-      icon: ShieldAlert,
-    }
-  ], [portfolio]);
-
+  // --- 3. ACTUAL UI RENDER ---
   return (
     <div className="space-y-6">
       <div className="space-y-8">
@@ -113,7 +117,6 @@ export default function DashboardContent({ onAssetClick, showOnly = "overview" }
             {/* 2. Ticker Bar */}
             <div className="flex justify-center border-y border-white/5 py-3 bg-white/[0.01]">
               <div className="inline-flex items-center gap-12 overflow-hidden">
-                 {/* Animatie-tip: je zou hier een marquee kunnen maken */}
                 {["EQUITIES", "FIXED INCOME", "COMMODITIES", "CASH"].map((item) => (
                   <span key={item} className="text-[10px] font-black tracking-[0.2em] text-slate-600">
                     {item}
@@ -125,7 +128,6 @@ export default function DashboardContent({ onAssetClick, showOnly = "overview" }
             {/* 3. Main Content Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2">
-                {/* We geven de enrichedAssets door voor de grafiek als die er is */}
                 <PerformanceChart data={portfolio.enrichedAssets || []} />
               </div>
 
@@ -143,7 +145,6 @@ export default function DashboardContent({ onAssetClick, showOnly = "overview" }
           </div>
         )}
 
-        {/* ... (Andere views blijven hetzelfde, maar gebruiken nu de veilige portfolio data) */}
         {currentView === "risk" && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
             <RiskTab portfolio={portfolio} />

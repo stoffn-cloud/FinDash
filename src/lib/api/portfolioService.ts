@@ -1,5 +1,6 @@
-import { db } from "../db"; // Jouw database connectie
+import { db } from "../db"; 
 import { calculatePortfolioSnapshot } from "../../logic/portfolioEngine";
+import { RowDataPacket } from "mysql2"; // Belangrijk voor TypeScript
 import { 
   Asset, AssetClass, AssetIndustry, AssetSector, 
   Country, Currency, Market, PortfolioItem, Region 
@@ -7,32 +8,33 @@ import {
 
 export const getFullPortfolioData = async () => {
   try {
-    // We halen alle 9 bronnen tegelijkertijd op
+    // We gebruiken [rows] om alleen de data te pakken en de 'fields' metadata te negeren
+    // We casten de resultaten naar de juiste types die RowDataPacket extenden
     const [
-      dbMetadata,
-      dbAssetClasses,
-      dbSectors,
-      dbIndustries,
-      dbCurrencies,
-      dbRegions,
-      dbCountries,
-      dbMarkets,
-      dbAssets
+      [dbHoldings], // Veranderd van portfolio_metadata naar holdings (of assets)
+      [dbAssetClasses],
+      [dbSectors],
+      [dbIndustries],
+      [dbCurrencies],
+      [dbRegions],
+      [dbCountries],
+      [dbMarkets],
+      [dbAssets]
     ] = await Promise.all([
-      db.query<PortfolioItem[]>("SELECT * FROM portfolio_metadata"),
-      db.query<AssetClass[]>("SELECT * FROM asset_classes"),
-      db.query<AssetSector[]>("SELECT * FROM asset_sectors"),
-      db.query<AssetIndustry[]>("SELECT * FROM asset_industries"),
-      db.query<Currency[]>("SELECT * FROM currencies"),
-      db.query<Region[]>("SELECT * FROM regions"),
-      db.query<Country[]>("SELECT * FROM countries"),
-      db.query<Market[]>("SELECT * FROM markets"),
-      db.query<Asset[]>("SELECT * FROM assets")
+      db.query<PortfolioItem[] & RowDataPacket[]>("SELECT * FROM holdings"), 
+      db.query<AssetClass[] & RowDataPacket[]>("SELECT * FROM asset_classes"),
+      db.query<AssetSector[] & RowDataPacket[]>("SELECT * FROM asset_sectors"),
+      db.query<AssetIndustry[] & RowDataPacket[]>("SELECT * FROM asset_industries"),
+      db.query<Currency[] & RowDataPacket[]>("SELECT * FROM currencies"),
+      db.query<Region[] & RowDataPacket[]>("SELECT * FROM regions"),
+      db.query<Country[] & RowDataPacket[]>("SELECT * FROM countries"),
+      db.query<Market[] & RowDataPacket[]>("SELECT * FROM markets"),
+      db.query<Asset[] & RowDataPacket[]>("SELECT * FROM assets")
     ]);
 
-    // De engine verwerkt alle rauwe data tot één overzichtelijk Portfolio object
+    // De engine verwerkt alle data
     const portfolioSnapshot = calculatePortfolioSnapshot(
-      dbMetadata,
+      dbHoldings,
       dbAssetClasses,
       dbSectors,
       dbIndustries,
@@ -41,7 +43,7 @@ export const getFullPortfolioData = async () => {
       dbCountries,
       dbMarkets,
       dbAssets,
-      new Date().toISOString().split('T')[0] // Vandaag als snapshot date
+      new Date().toISOString().split('T')[0]
     );
 
     return portfolioSnapshot;

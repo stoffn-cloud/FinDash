@@ -1,65 +1,56 @@
 import { useState, useEffect } from "react";
-// 1. Gebruik de @ alias voor een schone import
 import { calculatePortfolioSnapshot } from "@/logic/portfolioEngine";
-import { 
-  Portfolio, 
-  PortfolioItem, 
-  AssetClass, 
-  AssetSector, 
-  AssetIndustry, 
-  Currency, 
-  Region, 
-  Country, 
-  Market, 
-  Asset 
-} from "@/types"; // Importeer alles centraal vanuit de index
+import { Portfolio } from "@/types";
 
 class PortfolioStore {
   private portfolio: Portfolio | null = null;
   private listeners: (() => void)[] = [];
   private isLoading: boolean = false;
-
-  // Tip: Zorg dat je backend op 3001 draait zoals hier aangegeven
-  private API_BASE_URL = 'http://localhost:3001/api';
+  // We gebruiken het relatieve pad voor Next.js API routes
+  private API_BASE_URL = "/api";
 
   constructor() {}
 
-  /**
-   * Haalt alle relationele data op uit de MySQL database via de API
-   */
   public async syncWithDatabase() {
-    // Voorkom dubbele syncs
     if (this.isLoading) return;
 
     this.isLoading = true;
     this.notify();
 
     try {
-      // 2. Fetch de data van je Express server
-      const response = await fetch(`${this.API_BASE_URL}/portfolio-data`);
-      
-      if (!response.ok) throw new Error(`Server error: ${response.statusText}`);
-      
-      const data = await response.json();
+      console.log("🔄 FinDash: Gegevens ophalen uit SQL...");
 
-      // 3. De engine aanroepen met de exact juiste namen uit je API-response
-      // Let op: De namen hieronder (metadata, assetClasses, etc.) moeten matchen met je Express controller
+      // We halen data op uit de mappen die je daadwerkelijk hebt aangemaakt
+      const [assetsRes, marketsRes, holdingsRes] = await Promise.all([
+        fetch(`${this.API_BASE_URL}/portfolio/assets`),
+        fetch(`${this.API_BASE_URL}/portfolio/markets/status`),
+        fetch(`${this.API_BASE_URL}/holdings`)
+      ]);
+
+      // Debugging logs om te zien welke route faalt
+      if (!assetsRes.ok) console.warn("Assets route niet bereikbaar (404/500)");
+
+      const assetsData = assetsRes.ok ? await assetsRes.json() : [];
+      const marketsData = marketsRes.ok ? await marketsRes.json() : [];
+      const holdingsData = holdingsRes.ok ? await holdingsRes.ok && holdingsRes.status !== 405 ? await holdingsRes.json() : [] : [];
+
+      // Engine aanroepen om alle SQL data te verwerken naar een Dashboard-snapshot
       this.portfolio = calculatePortfolioSnapshot(
-        data.metadata || [], 
-        data.assetClasses || [], 
-        data.sectors || [],
-        data.industries || [],
-        data.currencies || [],
-        data.regions || [],
-        data.countries || [],
-        data.markets || [],
-        data.assets || [],
+        assetsData,       // Data uit portfolio_data tabel
+        [], 
+        [], 
+        [], 
+        [], 
+        [], 
+        [], // Optionele relationele tabellen
+        marketsData,      // Markt status/kalender
+        holdingsData,     // Specifieke instrumenten
         new Date().toISOString().split('T')[0]
       );
 
-      console.log("🚀 FinDash: Engine gesynced met MySQL Database");
+      console.log("🚀 FinDash: Dashboard succesvol geladen");
     } catch (error) {
-      console.error("❌ SQL Sync mislukt:", error);
+      console.error("❌ SQL Sync mislukt in Store:", error);
     } finally {
       this.isLoading = false;
       this.notify();
@@ -88,22 +79,16 @@ class PortfolioStore {
 
 export const portfolioStore = new PortfolioStore();
 
-/**
- * Hook voor je React Dashboard
- */
 export function usePortfolio() {
   const [portfolio, setPortfolio] = useState<Portfolio | null>(() => portfolioStore.getPortfolio());
   const [loading, setLoading] = useState<boolean>(() => portfolioStore.getLoadingStatus());
 
   useEffect(() => {
     const unsubscribe = portfolioStore.subscribe(() => {
-      const data = portfolioStore.getPortfolio();
-      // We maken een ondiepe kopie om React te dwingen te her-renderen
-      setPortfolio(data ? { ...data } : null);
+      setPortfolio(portfolioStore.getPortfolio() ? { ...portfolioStore.getPortfolio()! } : null);
       setLoading(portfolioStore.getLoadingStatus());
     });
     
-    // Initial fetch als er nog geen data is
     if (!portfolioStore.getPortfolio() && !portfolioStore.getLoadingStatus()) {
       portfolioStore.syncWithDatabase();
     }
@@ -112,8 +97,8 @@ export function usePortfolio() {
   }, []);
 
   return { 
-    portfolio,
-    loading,
-    refresh: () => portfolioStore.syncWithDatabase()
+    portfolio, 
+    loading, 
+    refresh: () => portfolioStore.syncWithDatabase() 
   };
 }
