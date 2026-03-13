@@ -17,7 +17,8 @@ import {
  * Gebruikt 'ticker' string als unieke identifier in plaats van ticker_id.
  */
 export interface DefaultHolding {
-  ticker: string;
+  ticker_id: number;
+  ticker?: string; // Optioneel, kan worden gebruikt voor validatie of mapping
   quantity: number;
   purchaseDate: string;   // camelCase zoals in jouw constante
   purchasePrice: number;  // camelCase zoals in jouw constante
@@ -50,13 +51,15 @@ export interface EnrichedAsset extends Asset {
  * We gebruiken snake_case om consistent te blijven met de database (Prisma/MySQL).
  */
 export interface EnrichedHolding extends EnrichedAsset {
-  purchase_date: string;    // Gefixed: matcht met RawHolding
-  purchase_price: number;   // Gefixed: matcht met RawHolding
+  id: number;               // Cruciaal: voeg dit toe voor de delete-functie
+  purchaseDate: string;     // Veranderd van purchase_date
+  purchasePrice: number;    // Veranderd van purchase_price
+  quantity: number;         // Zorg dat deze er ook in staat
   costBasis: number;
   marketValue: number;
-  pnlAbsolute: number;      // Nieuw: Nodig voor de Engines
-  pnlPercentage: number;    // Nieuw: Nodig voor de Engines
-  weight: number;           // Nieuw: Voor de tabel en charts
+  pnlAbsolute: number;
+  pnlPercentage: number;
+  weight: number;
 }
 
 // --- 2. ALLOCATION INTERFACES ---

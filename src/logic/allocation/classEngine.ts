@@ -7,14 +7,18 @@ import { calcWeight } from "../core/math";
  * Inclusief de valuta-exposure per klasse.
  */
 export const calculateClassAllocation = (
-  dbAssetClasses: AssetClass[],
-  dbCurrencies: Currency[],
-  holdings: EnrichedHolding[],
-  totalValue: number
+  dbAssetClasses: any[] = [], // Voeg '= []' toe als vangnet
+  dbCurrencies: any[] = [],
+  holdings: EnrichedHolding[] = [],
+  totalValue: number = 0
 ): EnrichedAssetClass[] => {
+  
+  // EXTRA VEILIGHEID: Als de lijst niet bestaat of geen array is, stop hier.
+  if (!dbAssetClasses || !Array.isArray(dbAssetClasses)) return [];
+
   return dbAssetClasses
     .map((ac, idx) => {
-      // 1. Filter holdings voor deze specifieke klasse
+      // De rest van je logica blijft hetzelfde...
       const holdingsInClass = holdings.filter(h => h.asset_classes_id === ac.asset_classes_id);
       const classValue = holdingsInClass.reduce((sum, h) => sum + h.marketValue, 0);
 

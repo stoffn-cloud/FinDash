@@ -2,16 +2,19 @@
 
 import { 
   LayoutDashboard, PieChart, ShieldAlert, Grid3X3, 
-  History, Landmark, Calendar, Zap, Calculator 
+  History, Landmark, Calendar, Zap, Calculator,
+  Database, ShieldCheck, Settings
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { usePortfolioStore } from "@/store/enrichedData/useSnapshotPortfolioStore";
 
 const menuItems = [
   { id: "Overview", icon: LayoutDashboard, tooltip: "Overview" },
   { id: "Asset Classes", icon: PieChart, tooltip: "Asset Classes" },
+  { id: "Editor", icon: Database, tooltip: "Portfolio Editor" }, // Nieuwe tab voor MySQL beheer
   { id: "Risk", icon: ShieldAlert, tooltip: "Risk Analytics" },
   { id: "Correlations", icon: Grid3X3, tooltip: "Correlation Matrix" },
   { id: "History", icon: History, tooltip: "Transaction History" },
@@ -22,21 +25,32 @@ const menuItems = [
 ];
 
 export default function Sidebar({ activeTab, setActiveTab }: { activeTab: string, setActiveTab: (id: string) => void }) {
+  const { isDemoLocked, setDemoLocked } = usePortfolioStore();
+
+  const handleToggleEnvironment = () => {
+    setDemoLocked(!isDemoLocked);
+    // Forceer herladen om de engine de nieuwe 'lock' status te laten oppakken
+    window.location.reload();
+  };
+
   return (
     <aside className="hidden md:flex flex-col items-center py-6 gap-4 w-20 border-r border-slate-900/60 bg-[#020617] sticky top-0 h-screen z-40">
       
-      {/* PROFILE SECTION - Beperkt tot de breedte van de sidebar */}
+      {/* PROFILE SECTION */}
       <div className="mb-6 group relative cursor-pointer">
         <div className="absolute inset-0 bg-blue-500/20 rounded-xl blur-lg group-hover:bg-blue-500/40 transition-all duration-500" />
         <div className="relative w-12 h-12 rounded-xl border border-slate-800 overflow-hidden bg-slate-950 ring-1 ring-white/5">
           <img 
-            src="/avatar.png" // Zorg dat de afbeelding in public/avatar.png staat
+            src="/avatar.png" 
             alt="Christophe" 
             className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" 
           />
         </div>
-        {/* Status indicator */}
-        <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-[#020617] rounded-full shadow-lg" />
+        {/* Status indicator gekoppeld aan Environment */}
+        <div className={cn(
+          "absolute -bottom-1 -right-1 w-3 h-3 border-2 border-[#020617] rounded-full shadow-lg transition-colors duration-500",
+          isDemoLocked ? "bg-amber-500" : "bg-emerald-500"
+        )} />
       </div>
 
       <div className="h-px w-8 bg-slate-800/50 mb-4" />
@@ -79,9 +93,37 @@ export default function Sidebar({ activeTab, setActiveTab }: { activeTab: string
         ))}
       </nav>
 
-      {/* BOTTOM ACTION (Optioneel: Logout of Settings) */}
-      <div className="mt-auto pt-6 border-t border-slate-800/50 w-8 flex justify-center">
-         <div className="w-1.5 h-1.5 rounded-full bg-slate-700 animate-pulse" />
+      {/* ENVIRONMENT TOGGLE ACTION */}
+      <div className="mt-auto flex flex-col items-center gap-4 pt-6 border-t border-slate-800/50 w-full">
+        <TooltipProvider delayDuration={0}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={handleToggleEnvironment}
+                className={cn(
+                  "h-10 w-10 rounded-xl border transition-all duration-500",
+                  isDemoLocked 
+                    ? "border-amber-500/20 bg-amber-500/5 text-amber-500 hover:bg-amber-500/10" 
+                    : "border-emerald-500/20 bg-emerald-500/5 text-emerald-500 hover:bg-emerald-500/10"
+                )}
+              >
+                {isDemoLocked ? <Zap className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="bg-slate-950 border-slate-800 text-[10px] uppercase font-bold tracking-widest px-3 py-1.5">
+              {isDemoLocked ? "Demo Mode Active" : "Production Mode"}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        
+        <div className="pb-2">
+           <div className={cn(
+             "w-1.5 h-1.5 rounded-full animate-pulse",
+             isDemoLocked ? "bg-amber-500" : "bg-emerald-500"
+           )} />
+        </div>
       </div>
     </aside>
   );

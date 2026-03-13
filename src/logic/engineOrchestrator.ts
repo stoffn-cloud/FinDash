@@ -1,17 +1,20 @@
+"use client";
+
 import { 
   Asset, AssetClass, AssetSector, AssetIndustry, 
   Currency, Region, Country, Market, Portfolio, 
   OHLCVHistory, EnrichedHolding, RawHolding,
-  // Zorg dat deze in je types bestand staat met 'export'
   DefaultHolding 
 } from "../types";
 
-// 1. Controleer of deze paden exact kloppen met je mappenstructuur
+import { DEFAULT_HOLDINGS } from "@/data/constants/defaultHolding"; 
+
+// 1. Core Engines
 import { enrichAssets } from "./portfolio/assetEngine";
 import { enrichUserHoldings } from "./holdings/holdingsEngine"; 
 import { calculateStats } from "./portfolio/statsEngine";
 
-// 2. De allocatie imports (die ontbraken in je foutmelding)
+// 2. Allocation Engines
 import { calculateClassAllocation } from "./allocation/classEngine";
 import { calculateSectorAllocation } from "./allocation/sectorEngine";
 import { calculateGeoAllocation } from "./allocation/geographyEngine";
@@ -19,21 +22,17 @@ import { calculateMarketAllocation } from "./allocation/marketEngine";
 import { calculateCurrencyExposure } from "./allocation/currencyEngine";
 
 /**
- * DE ADAPTER: Vertaalt Ticker Strings (Hardcoded) naar Ticker IDs (Database)
+ * DE ADAPTER: Zorgt dat de input voldoet aan het RawHolding type.
  */
-const translateDefaultToRaw = (
-  defaultHoldings: DefaultHolding[],
-  dbAssets: Asset[]
-): RawHolding[] => {
-  return defaultHoldings.map((def) => {
-    const asset = dbAssets.find((a) => a.ticker === def.ticker);
-    return {
-      ticker_id: asset?.ticker_id ?? 0,
-      quantity: def.quantity,
-      purchase_price: def.purchasePrice ?? 0,
-      purchase_date: def.purchaseDate,
-    };
-  });
+const prepareRawInput = (holdings: DefaultHolding[]): RawHolding[] => {
+  return holdings.map((h, index) => ({
+    // Forceer id naar number voor TypeScript compatibiliteit
+    id: Number((h as any).id) || index + 1, 
+    ticker_id: Number(h.ticker_id),
+    quantity: Number(h.quantity),
+    purchasePrice: Number(h.purchasePrice),
+    purchaseDate: h.purchaseDate,
+  }));
 };
 
 export const calculatePortfolioSnapshot = (
@@ -45,46 +44,68 @@ export const calculatePortfolioSnapshot = (
   dbRegions: Region[],
   dbCountries: Country[],
   dbMarkets: Market[],
-  userHoldings: DefaultHolding[], 
+  userHoldings: DefaultHolding[] = [], 
   prices: OHLCVHistory[],
   snapshotDate: string = new Date().toISOString().split('T')[0]
 ): Portfolio => {
 
   try {
-    // STAP 0: Vertalen naar RawHoldings (Ticker -> ID)
-    const rawInput = translateDefaultToRaw(userHoldings, dbAssets);
+    // STAP 0: Bepaal actieve data en filter ongeldige (ticker_id 0) records eruit
+    const activeInput = userHoldings.length > 0 ? userHoldings : DEFAULT_HOLDINGS;
+    
+    // Belangrijk: We verwerken alleen holdings die gekoppeld zijn aan een echt instrument (ID > 0)
+    const rawInput = prepareRawInput(activeInput).filter(h => h.ticker_id > 0);
 
     // STAP 1: Assets verrijken
     const enrichedAssets = enrichAssets(
       dbAssets, prices, dbMarkets, dbAssetClasses, 
       dbCurrencies, dbIndustries, dbCountries
-    );
+    ) || [];
 
     // STAP 2: Holdings verrijken
-    const rawHoldings = enrichUserHoldings(rawInput, enrichedAssets);
+    const intermediateHoldings = enrichUserHoldings(rawInput, enrichedAssets) || [];
 
     // STAP 3: Totale waarde
-    const totalValue = rawHoldings.reduce((sum: number, h: EnrichedHolding) => sum + h.marketValue, 0);
+    const totalValue = intermediateHoldings.reduce((sum: number, h: EnrichedHolding) => sum + (h.marketValue || 0), 0);
 
-    // STAP 4: Weights toevoegen
-    const holdings = rawHoldings.map((h: EnrichedHolding) => ({
-      ...h,
-      weight: totalValue > 0 ? (h.marketValue / totalValue) * 100 : 0
-    }));
+    // STAP 4: Weights toevoegen & ID fix voor TypeScript (EnrichedHolding[] type)
+    const holdings: EnrichedHolding[] = intermediateHoldings.map((h, index) => {
+      const originalId = h.id || rawInput[index]?.id;
+      
+      return {
+        ...h,
+        // TypeScript FIX: id moet strikt een number zijn. 
+        // We gebruiken een hoog getal als fallback om strings te vermijden.
+        id: typeof originalId === 'number' ? originalId : (999000 + index),
+        weight: totalValue > 0 ? ((h.marketValue || 0) / totalValue) * 100 : 0
+      };
+    });
 
     // STAP 5: Allocaties berekenen
-    const assetAllocation = calculateClassAllocation(dbAssetClasses, dbCurrencies, holdings, totalValue);
-    const { sectorAllocation, industryAllocation } = calculateSectorAllocation(dbSectors, dbIndustries, holdings, totalValue);
-    const { regionAllocation, countryAllocation } = calculateGeoAllocation(dbCountries, dbRegions, holdings, totalValue);
-    const marketAllocation = calculateMarketAllocation(dbMarkets, holdings, totalValue);
-    const currencyExposure = calculateCurrencyExposure(dbCurrencies, holdings, totalValue);
+    const assetAllocation = calculateClassAllocation(dbAssetClasses, dbCurrencies, holdings, totalValue) || [];
+    const sectorData = calculateSectorAllocation(dbSectors, dbIndustries, holdings, totalValue);
+    const geoData = calculateGeoAllocation(dbCountries, dbRegions, holdings, totalValue);
+    const marketAllocation = calculateMarketAllocation(dbMarkets, holdings, totalValue) || [];
+    const currencyExposure = calculateCurrencyExposure(dbCurrencies, holdings, totalValue) || [];
+
+    const sectorAllocation = sectorData?.sectorAllocation || [];
+    const industryAllocation = sectorData?.industryAllocation || [];
+    const regionAllocation = geoData?.regionAllocation || [];
+    const countryAllocation = geoData?.countryAllocation || [];
 
     // STAP 6: Stats
     const stats = calculateStats(enrichedAssets, holdings, dbSectors);
 
+    // DEBUG LOG
+    console.log("📊 Snapshot Result:", {
+      totalHoldings: holdings.length,
+      totalAssets: enrichedAssets.length,
+      portfolioValue: totalValue
+    });
+
     return {
       id: `snapshot-${snapshotDate}`,
-      name: "Mijn Vermogen",
+      name: userHoldings.length > 0 ? "Mijn Portfolio" : "Demo Portfolio",
       holdings,
       assetAllocation,
       sectorAllocation,
@@ -93,13 +114,29 @@ export const calculatePortfolioSnapshot = (
       regionAllocation,
       countryAllocation,
       marketAllocation,
-      enrichedAssets,
+      enrichedAssets, 
       stats,
       totalValue,
       lastUpdated: snapshotDate
     };
   } catch (error) {
     console.error("❌ Kritieke fout in Portfolio Orchestrator:", error);
-    throw error;
+    // Veilige fallback return bij fouten
+    return {
+      id: "error",
+      name: "Error loading portfolio",
+      holdings: [],
+      assetAllocation: [],
+      sectorAllocation: [],
+      industryAllocation: [],
+      currencyExposure: [],
+      regionAllocation: [],
+      countryAllocation: [],
+      marketAllocation: [],
+      enrichedAssets: [],
+      stats: {} as any,
+      totalValue: 0,
+      lastUpdated: snapshotDate
+    };
   }
 };

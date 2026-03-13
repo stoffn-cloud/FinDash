@@ -7,9 +7,11 @@ export * from './raw';
 export * from './enriched';
 
 // 3. Handmatige types die (nog) nergens anders staan
+// src/types/index.ts (of waar RawHolding staat)
 export interface RawHolding {
+  id: number;
   ticker_id: number;
   quantity: number;
-  purchase_price: number;
-  purchase_date: string;
+  purchasePrice: number; // Aanpassen naar CamelCase
+  purchaseDate: string | Date; // Aanpassen naar CamelCase
 }
