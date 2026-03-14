@@ -1,8 +1,11 @@
 import { Asset, EnrichedAsset, EnrichedHolding, RawHolding, OHLCVHistory } from "@/types";
 import { calcPnL } from "../core/math";
 
+/**
+ * Verrijkt de basis Assets met meta-data en prijzen.
+ */
 export const enrichAssets = (
-  dbAssets: Asset[] = [], // Veiligheid: altijd een array
+  dbAssets: Asset[] = [],
   prices: OHLCVHistory[] = [],
   dbMarkets: any[] = [],
   dbClasses: any[] = [],
@@ -10,7 +13,6 @@ export const enrichAssets = (
   dbIndustries: any[] = [],
   dbCountries: any[] = []
 ): EnrichedAsset[] => {
-  // Harde check om de "map of undefined" crash te voorkomen
   if (!dbAssets || !Array.isArray(dbAssets)) return [];
 
   return dbAssets.map(asset => {
@@ -23,23 +25,28 @@ export const enrichAssets = (
 
     return {
       ...asset,
+      // Sector mapping (voor robuustheid kijken we naar beide mogelijke veldnamen)
+      sectors_id: (asset as any).sectors_id || (asset as any).asset_sectors_id || 0,
+      asset_sectors_id: (asset as any).asset_sectors_id || (asset as any).sectors_id || 0,
+      
       market_name: market?.full_name ?? "Unknown Market",
       asset_class_name: aClass?.asset_class ?? "Unknown Class",
       currency_code: currency?.ISO_code ?? "EUR",
       industry_name: industry?.description ?? "Unknown Industry",
       country_name: country?.full_name ?? "Unknown Country",
-      current_price: priceData?.close_price ?? 0,
+      current_price: Number(priceData?.close_price) || 0,
       total_quantity: 0,
       total_market_value: 0,
       is_tracker: aClass?.asset_class?.toLowerCase()?.includes('etf') || 
                   aClass?.asset_class?.toLowerCase()?.includes('tracker') || false,
-      isin: asset.ISIN
-    };
+      isin: asset.ISIN || null
+    } as EnrichedAsset;
   });
 };
 
 /**
- * Verrijkt de persoonlijke holdings (transacties)
+ * Verrijkt de persoonlijke holdings (transacties).
+ * Deze functie fungeert als de vertaler tussen RawHolding (Input) en EnrichedHolding (Output).
  */
 export const enrichHoldings = (
   userHoldings: RawHolding[] = [],
@@ -50,35 +57,39 @@ export const enrichHoldings = (
   return userHoldings.map(raw => {
     const asset = enrichedAssets.find(a => a.ticker_id === raw.ticker_id);
     
+    // 1. Haal data uit RawHolding (gebruik camelCase zoals in je interface staat)
     const currentPrice = asset?.current_price ?? 0;
-    const marketValue = raw.quantity * currentPrice;
+    const qty = Number(raw.quantity) || 0;
     
-    const costPrice = raw.purchasePrice ?? 0; 
-    const costBasis = raw.quantity * costPrice;
+    // De adapter in de orchestrator vult purchasePrice in, dus dat gebruiken we hier
+    const pPrice = Number(raw.purchasePrice || (raw as any).purchase_price || 0);
+    
+    // 2. Berekeningen
+    const market_value = qty * currentPrice;
+    const cost_basis = qty * pPrice;
+    const { absolute, percentage } = calcPnL(market_value, cost_basis);
 
-    const { absolute, percentage } = calcPnL(marketValue, costBasis);
+    // 3. Datum formatteer-logica
+    const rawDate = raw.purchaseDate || (raw as any).purchase_date;
+    const purchase_date = rawDate instanceof Date 
+        ? rawDate.toISOString().split('T')[0] 
+        : String(rawDate || "2025-01-01").split('T')[0];
 
+    // 4. Return het object exact volgens de EnrichedHolding interface (snake_case)
     return {
-      // 1. Neem alle data van de Asset (naam, sector, etc.)
       ...(asset as EnrichedAsset),
       
-      // 2. VOEG DIT TOE: Het unieke ID van de transactie zelf!
-      // Dit lost de "Property 'id' is missing" error op.
       id: raw.id ?? 0, 
-
-      // 3. De specifieke transactiegegevens
-      quantity: Number(raw.quantity) || 0,
-purchaseDate: raw.purchaseDate instanceof Date 
-        ? raw.purchaseDate.toISOString().split('T')[0] 
-        : String(raw.purchaseDate),
-
-      purchasePrice: costPrice,
-      currentPrice: currentPrice,
-      marketValue,
-      costBasis,
-      pnlAbsolute: absolute,
-      pnlPercentage: percentage,
+      quantity: qty,
+      
+      // Mappen naar snake_case voor consistentie in de rest van de app
+      purchase_date: purchase_date,
+      purchase_price: pPrice,
+      cost_basis: cost_basis,
+      market_value: market_value,
+      pnl_absolute: absolute,
+      pnl_percentage: percentage,
       weight: 0 
-    };
+    } as EnrichedHolding;
   });
 };

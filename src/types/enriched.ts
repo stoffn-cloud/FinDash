@@ -6,31 +6,27 @@ import {
   Currency, 
   Region, 
   Country, 
-  Market,
-  RawHolding
+  Market
 } from "./raw";
 
-// --- 0. INPUT INTERFACES (Voor hardcoded data) ---
-
 /**
- * De interface voor handmatige invoer (bijv. in defaultHoldings.ts).
- * Gebruikt 'ticker' string als unieke identifier in plaats van ticker_id.
+ * 0. INPUT INTERFACES
+ * Gebruikt voor handmatige invoer of mock-data.
+ * Matcht met RawHoldingSchema voor naadloze validatie.
  */
 export interface DefaultHolding {
   ticker_id: number;
-  ticker?: string; // Optioneel, kan worden gebruikt voor validatie of mapping
   quantity: number;
-  purchaseDate: string;   // camelCase zoals in jouw constante
-  purchasePrice: number;  // camelCase zoals in jouw constante
+  purchase_price: number;
+  purchase_date: string; // 'YYYY-MM-DD'
 }
 
-// ... rest van je bestaande code (EnrichedAsset, EnrichedHolding, etc.)
-
-
-// --- 1. HOLDINGS & ASSETS ---
+/**
+ * 1. HOLDINGS & ASSETS
+ */
 
 /**
- * Verrijkte Asset: Bevat namen in plaats van enkel Foreign Key ID's
+ * Verrijkte Asset: Statische data + Marktprijs.
  */
 export interface EnrichedAsset extends Asset {
   market_name: string;
@@ -43,26 +39,29 @@ export interface EnrichedAsset extends Asset {
   total_quantity: number;
   total_market_value: number;
   is_tracker: boolean;
-  isin: string | null;
 }
 
 /**
- * Verrijkte Holding: De combinatie van een aandeel met jouw persoonlijke aankoopdata.
- * We gebruiken snake_case om consistent te blijven met de database (Prisma/MySQL).
+ * Verrijkte Holding: De koppeling tussen je portefeuilledata en assetinformatie.
+ * We gebruiken snake_case om 1-op-1 te matchen met de RawHolding uit de DB.
  */
 export interface EnrichedHolding extends EnrichedAsset {
-  id: number;               // Cruciaal: voeg dit toe voor de delete-functie
-  purchaseDate: string;     // Veranderd van purchase_date
-  purchasePrice: number;    // Veranderd van purchase_price
-  quantity: number;         // Zorg dat deze er ook in staat
-  costBasis: number;
-  marketValue: number;
-  pnlAbsolute: number;
-  pnlPercentage: number;
-  weight: number;
+  id: number;               
+  quantity: number;         
+  purchase_price: number;    
+  purchase_date: string;     
+  
+  // Berekende waarden (Financials)
+  cost_basis: number;       // quantity * purchase_price
+  market_value: number;     // quantity * current_price
+  pnl_absolute: number;     // market_value - cost_basis
+  pnl_percentage: number;   
+  weight: number;           // % van totale portfolio
 }
 
-// --- 2. ALLOCATION INTERFACES ---
+/**
+ * 2. ALLOCATION INTERFACES
+ */
 
 export interface EnrichedAssetClass extends AssetClass {
   id: number;
@@ -70,7 +69,6 @@ export interface EnrichedAssetClass extends AssetClass {
   current_value: number;
   allocation_percent: number;
   color: string;
-  assets: EnrichedHolding[];
 }
 
 export interface EnrichedAssetSector extends AssetSector {
@@ -79,7 +77,6 @@ export interface EnrichedAssetSector extends AssetSector {
   current_value: number;
   allocation_percent: number;
   color: string;
-  holding_count: number;
 }
 
 export interface EnrichedAssetIndustry extends AssetIndustry {
@@ -87,9 +84,7 @@ export interface EnrichedAssetIndustry extends AssetIndustry {
   name: string;
   current_value: number;
   allocation_total_percent: number;
-  allocation_sector_percent: number;
   color: string;
-  holding_count: number;
 }
 
 export interface EnrichedCurrency extends Currency {
@@ -103,9 +98,7 @@ export interface EnrichedCountry extends Country {
   id: number;
   name: string;
   current_value: number;
-  allocation_total_percent: number;
-  allocation_region_percent: number;
-  holding_count: number;
+  allocation_percent: number;
 }
 
 export interface EnrichedRegion extends Region {
@@ -113,7 +106,6 @@ export interface EnrichedRegion extends Region {
   name: string;
   current_value: number;
   allocation_percent: number;
-  holding_count: number;
   countries: EnrichedCountry[];
 }
 
@@ -122,14 +114,12 @@ export interface EnrichedMarket extends Market {
   name: string;
   current_value: number;
   allocation_percent: number;
-  holding_count: number;
 }
 
-// --- 3. PORTFOLIO & STATS ---
-
 /**
- * Uitgebreide statistieken voor de Top Cards van het dashboard
+ * 3. PORTFOLIO, STATS & HISTORY
  */
+
 export interface PortfolioStats {
   total_assets: number;
   unique_markets: number;
@@ -137,22 +127,33 @@ export interface PortfolioStats {
   unique_sectors: number;
   tracker_count: number;
   stock_count: number;
-  
-  // Nieuwe velden die we in de statsEngine berekenen:
   total_value: number;
   total_pnl_absolute: number;
   total_pnl_percent: number;
-  top_performer_name: string;
   top_performer_ticker: string;
   top_performer_pct: number;
   concentration_risk: 'Low' | 'Medium' | 'High';
   highest_holding_weight: number;
 }
 
+/**
+ * Datapunt voor de PerformanceChart (Recharts)
+ */
+export interface PortfolioHistoryPoint {
+  date: string;         // 'YYYY-MM-DD'
+  total_value: number;
+}
+
+/**
+ * De Master Portfolio Object
+ */
 export interface Portfolio {
   id: string;
   name: string;
   holdings: EnrichedHolding[];
+  enrichedAssets: EnrichedAsset[];
+
+  // Allocatie-data
   assetAllocation: EnrichedAssetClass[];
   sectorAllocation: EnrichedAssetSector[];
   industryAllocation: EnrichedAssetIndustry[];
@@ -160,7 +161,11 @@ export interface Portfolio {
   regionAllocation: EnrichedRegion[];
   countryAllocation: EnrichedCountry[];
   marketAllocation: EnrichedMarket[];
-  enrichedAssets: EnrichedAsset[];
+
+  // Grafiek-data
+  history: PortfolioHistoryPoint[];
+
+  // Dashboard-data
   stats: PortfolioStats;
   totalValue: number;
   lastUpdated: string;

@@ -1,14 +1,13 @@
 import { create } from 'zustand';
 import { calculatePortfolioSnapshot } from '@/logic/engineOrchestrator';
 import { DEFAULT_HOLDINGS } from '@/data/constants/defaultHolding';
-import { Portfolio, DefaultHolding } from '@/types';
+import { Portfolio, DefaultHolding, EnrichedAsset } from '@/types';
 
 interface PortfolioState {
   portfolio: Portfolio | null;
   isInitialised: boolean;
   isDemoLocked: boolean; 
   setDemoLocked: (locked: boolean) => void;
-  // We veranderen de input naar 'any' om flexibel te zijn met het object uit page.tsx
   updatePortfolio: (data: any) => void;
 }
 
@@ -25,8 +24,7 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
     try {
       const { isDemoLocked } = get();
 
-      // MAPPING: Zorg dat we de namen gebruiken die uit page.tsx komen
-      // Page stuurt 'dbAssets', 'dbAssetClasses', etc.
+      // 1. Data extractie
       const assets = data.dbAssets || data.assets || [];
       const classes = data.dbAssetClasses || data.classes || [];
       const sectors = data.dbSectors || data.sectors || [];
@@ -35,15 +33,16 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
       const regions = data.dbRegions || data.regions || [];
       const countries = data.dbCountries || data.countries || [];
       const markets = data.dbMarkets || data.markets || [];
-      const prices = data.prices || {};
+      const prices = data.prices || []; // Zorg dat dit een array is
       
-      // Holdings bepalen
+      // 2. Holdings bepalen
       const userHoldingsFromDb = data.userHoldings || [];
       const activeHoldings = (isDemoLocked || userHoldingsFromDb.length === 0) 
-        ? DEFAULT_HOLDINGS 
+        ? (DEFAULT_HOLDINGS as unknown as DefaultHolding[]) 
         : userHoldingsFromDb;
 
-      // Bereken de snapshot met de juiste variabelen
+      // 3. Bereken de snapshot via de Orchestrator
+      // Deze snapshot bevat nu de snake_case financials (market_value, etc.)
       const snapshot = calculatePortfolioSnapshot(
         assets,
         classes,
@@ -57,19 +56,20 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
         prices
       );
 
-      // Verrijk het portfolio object zodat de Editor de assets kan vinden
-      const enrichedPortfolio = {
+      // 4. De "Brug" naar de UI:
+      // We zorgen dat het portfolio object exact de vorm heeft die de UI verwacht.
+      // We overschrijven enrichedAssets alleen als de snapshot die niet al heeft.
+      const finalPortfolio: Portfolio = {
         ...snapshot,
-        enrichedAssets: assets, // De lijst waar de zoekbalk naar kijkt!
-        holdings: activeHoldings // Zorg dat holdings ook in portfolio zitten
+        enrichedAssets: (snapshot as any).enrichedAssets || assets, 
       };
 
       set({ 
-        portfolio: enrichedPortfolio, 
+        portfolio: finalPortfolio, 
         isInitialised: true 
       });
 
-      console.log("🏪 Store Success: Assets in portfolio:", assets.length);
+      console.log("🏪 Store Success: Portfolio updated with", finalPortfolio.holdings.length, "holdings");
     } catch (error) {
       console.error("❌ Store Update Error:", error);
     }

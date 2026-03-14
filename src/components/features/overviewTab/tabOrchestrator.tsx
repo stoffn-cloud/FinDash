@@ -1,17 +1,18 @@
 "use client";
 
-import { useMemo, useEffect } from "react";
-import { 
-  DollarSign, ArrowUpRight, Activity, ShieldAlert, Loader2 
+import { useMemo } from "react";
+import {
+  DollarSign, ArrowUpRight, Activity, ShieldAlert, Loader2
 } from "lucide-react";
 import { motion } from "framer-motion";
 
 // Components
-import PerformanceChart from "./performanceChart";
+import PerformanceChart from "./historicalPerformanceTile/performanceChart";
 import SectorChart from "./sectorChart";
 import AssetAllocationTable from "./portfolioMixTile/assetAllocationTable";
+import CurrencyBreakdown from "./currencyBreakdown";
 import RiskTab from "../riskTab/riskTab";
-import { PortfolioValueTile } from "./upperTiles/portfolioValueTile"; // Nieuwe import
+import { PortfolioValueTile } from "./upperTiles/portfolioValueTile";
 
 // Types
 import { Portfolio, EnrichedHolding, EnrichedAssetClass } from "@/types";
@@ -19,49 +20,49 @@ import { usePortfolioStore } from "@/store/enrichedData/useSnapshotPortfolioStor
 
 interface TabOrchestratorProps {
   portfolio: Portfolio;
-  onAssetClick: (item: EnrichedHolding | EnrichedAssetClass) => void; 
+  onAssetClick: (item: EnrichedHolding | EnrichedAssetClass) => void;
   showOnly?: string;
 }
 
-export default function TabOrchestrator({ 
-  portfolio, 
-  onAssetClick, 
-  showOnly = "overview" 
+export default function TabOrchestrator({
+  portfolio,
+  onAssetClick,
+  showOnly = "overview"
 }: TabOrchestratorProps) {
   const isInitialised = usePortfolioStore((state) => state.isInitialised);
   const currentView = showOnly.toLowerCase().trim();
 
   const metrics = useMemo(() => {
-    if (!portfolio?.stats) return [];
-    const { stats, totalValue } = portfolio;
+    if (!portfolio) return [];
+    const { stats, totalValue, holdings = [] } = portfolio;
 
     return [
       {
         label: "Portfolio Total",
-        value: new Intl.NumberFormat('en-US', { 
-          style: 'currency', currency: 'USD', notation: 'compact' 
+        value: new Intl.NumberFormat('en-US', {
+          style: 'currency', currency: 'USD', notation: 'compact'
         }).format(totalValue || 0),
-        change: `${stats.total_assets || 0} Assets`,
+        change: `${holdings.length} ${holdings.length === 1 ? 'Asset' : 'Assets'}`,
         icon: DollarSign,
         color: "text-emerald-400"
       },
       {
         label: "Global Reach",
-        value: `${stats.unique_markets || 0}`,
+        value: `${stats?.unique_markets || 0}`,
         change: "Markets",
         icon: ArrowUpRight,
         color: "text-blue-400"
       },
       {
         label: "Diversification",
-        value: `${stats.unique_sectors || 0}`,
+        value: `${stats?.unique_sectors || 0}`,
         change: "Sectors",
         icon: Activity,
         color: "text-purple-400"
       },
       {
         label: "Portfolio Mix",
-        value: `${stats.stock_count || 0}:${stats.tracker_count || 0}`,
+        value: `${(stats?.stock_count || 0)}:${(stats?.tracker_count || 0)}`,
         change: "Stocks:ETFs",
         icon: ShieldAlert,
         color: "text-amber-400"
@@ -83,15 +84,15 @@ export default function TabOrchestrator({
   return (
     <div className="w-full space-y-6">
       {currentView === "overview" && (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="space-y-8"
         >
-          {/* 1. Top Metrics via de nieuwe PortfolioValueTile component */}
+          {/* Dashboard KPI Tiles */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {metrics.map((metric, i) => (
-              <PortfolioValueTile 
+              <PortfolioValueTile
                 key={i}
                 label={metric.label}
                 value={metric.value}
@@ -102,22 +103,30 @@ export default function TabOrchestrator({
             ))}
           </div>
 
-          {/* 2. Main Content Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            <div className="lg:col-span-8 min-h-[400px] w-full overflow-hidden bg-slate-900/20 rounded-3xl border border-white/5 p-1">
-               <PerformanceChart data={portfolio.holdings || []} />
+            {/* Linkerkant: Performance Grafiek */}
+            <div className="lg:col-span-8">
+              <div className="min-h-[500px] w-full overflow-hidden bg-slate-900/20 rounded-[2.5rem] border border-white/5 p-1">
+                {/* FIX: Gebruik portfolio.history in plaats van portfolio.holdings */}
+                <PerformanceChart data={portfolio.history || []} />
+              </div>
             </div>
 
+            {/* Rechterkant: Allocatie en Sectoren */}
             <div className="lg:col-span-4 flex flex-col gap-6">
-              <div className="w-full min-h-[200px]">
-                <AssetAllocationTable 
-                  assetClasses={portfolio.assetAllocation || []} 
-                  onAssetClick={onAssetClick} 
-                />
-              </div>
-              <div className="bg-slate-900/40 rounded-3xl border border-white/5 p-6 h-[280px] w-full flex flex-col justify-center overflow-hidden">
+              <AssetAllocationTable
+                assetClasses={portfolio.assetAllocation || []}
+                onAssetClick={onAssetClick}
+              />
+
+              <div className="bg-slate-900/40 rounded-[2rem] border border-white/5 p-8 min-h-[300px] w-full flex flex-col justify-center overflow-hidden">
                 <SectorChart sectors={portfolio.sectorAllocation || []} />
               </div>
+
+              {/* FIX: Gebruik currencyExposure conform de nieuwe Portfolio interface */}
+              <CurrencyBreakdown
+                currencies={portfolio.currencyExposure || []}
+              />
             </div>
           </div>
         </motion.div>

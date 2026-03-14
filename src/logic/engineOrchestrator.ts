@@ -9,12 +9,13 @@ import {
 
 import { DEFAULT_HOLDINGS } from "@/data/constants/defaultHolding"; 
 
-// 1. Core Engines
+// Engines
 import { enrichAssets } from "./portfolio/assetEngine";
 import { enrichUserHoldings } from "./holdings/holdingsEngine"; 
 import { calculateStats } from "./portfolio/statsEngine";
+import { calculatePortfolioHistory } from "./portfolio/historyEngine"; 
 
-// 2. Allocation Engines
+// Allocation Engines
 import { calculateClassAllocation } from "./allocation/classEngine";
 import { calculateSectorAllocation } from "./allocation/sectorEngine";
 import { calculateGeoAllocation } from "./allocation/geographyEngine";
@@ -22,17 +23,25 @@ import { calculateMarketAllocation } from "./allocation/marketEngine";
 import { calculateCurrencyExposure } from "./allocation/currencyEngine";
 
 /**
- * DE ADAPTER: Zorgt dat de input voldoet aan het RawHolding type.
+ * ADAPTER: Mapt input naar RawHolding.
  */
 const prepareRawInput = (holdings: DefaultHolding[]): RawHolding[] => {
-  return holdings.map((h, index) => ({
-    // Forceer id naar number voor TypeScript compatibiliteit
-    id: Number((h as any).id) || index + 1, 
-    ticker_id: Number(h.ticker_id),
-    quantity: Number(h.quantity),
-    purchasePrice: Number(h.purchasePrice),
-    purchaseDate: h.purchaseDate,
-  }));
+  return holdings.map((h, index) => {
+    const ticker_id = Number(h.ticker_id);
+    const quantity = Number(h.quantity) || 0;
+    const pPrice = Number(h.purchase_price) || Number((h as any).purchasePrice) || 0;
+    const pDate = h.purchase_date || (h as any).purchaseDate || "2025-01-01";
+
+    return {
+      id: index + 1,
+      ticker_id,
+      quantity,
+      purchase_price: pPrice, 
+      purchase_date: pDate,   
+      purchasePrice: pPrice,  
+      purchaseDate: pDate     
+    } as RawHolding;
+  });
 };
 
 export const calculatePortfolioSnapshot = (
@@ -50,81 +59,51 @@ export const calculatePortfolioSnapshot = (
 ): Portfolio => {
 
   try {
-    // STAP 0: Bepaal actieve data en filter ongeldige (ticker_id 0) records eruit
-    const activeInput = userHoldings.length > 0 ? userHoldings : DEFAULT_HOLDINGS;
-    
-    // Belangrijk: We verwerken alleen holdings die gekoppeld zijn aan een echt instrument (ID > 0)
+    const activeInput = userHoldings.length > 0 ? userHoldings : (DEFAULT_HOLDINGS as any);
     const rawInput = prepareRawInput(activeInput).filter(h => h.ticker_id > 0);
 
-    // STAP 1: Assets verrijken
-    const enrichedAssets = enrichAssets(
-      dbAssets, prices, dbMarkets, dbAssetClasses, 
-      dbCurrencies, dbIndustries, dbCountries
-    ) || [];
-
-    // STAP 2: Holdings verrijken
+    const enrichedAssets = enrichAssets(dbAssets, prices, dbMarkets, dbAssetClasses, dbCurrencies, dbIndustries, dbCountries) || [];
     const intermediateHoldings = enrichUserHoldings(rawInput, enrichedAssets) || [];
 
-    // STAP 3: Totale waarde
-    const totalValue = intermediateHoldings.reduce((sum: number, h: EnrichedHolding) => sum + (h.marketValue || 0), 0);
+    const totalValue = intermediateHoldings.reduce((sum: number, h: EnrichedHolding) => sum + (h.market_value || 0), 0);
 
-    // STAP 4: Weights toevoegen & ID fix voor TypeScript (EnrichedHolding[] type)
-    const holdings: EnrichedHolding[] = intermediateHoldings.map((h, index) => {
-      const originalId = h.id || rawInput[index]?.id;
-      
-      return {
-        ...h,
-        // TypeScript FIX: id moet strikt een number zijn. 
-        // We gebruiken een hoog getal als fallback om strings te vermijden.
-        id: typeof originalId === 'number' ? originalId : (999000 + index),
-        weight: totalValue > 0 ? ((h.marketValue || 0) / totalValue) * 100 : 0
-      };
-    });
+    const holdings: EnrichedHolding[] = intermediateHoldings.map((h) => ({
+      ...h,
+      weight: totalValue > 0 ? ((h.market_value || 0) / totalValue) * 100 : 0
+    }));
 
-    // STAP 5: Allocaties berekenen
+    // Allocaties
     const assetAllocation = calculateClassAllocation(dbAssetClasses, dbCurrencies, holdings, totalValue) || [];
     const sectorData = calculateSectorAllocation(dbSectors, dbIndustries, holdings, totalValue);
     const geoData = calculateGeoAllocation(dbCountries, dbRegions, holdings, totalValue);
     const marketAllocation = calculateMarketAllocation(dbMarkets, holdings, totalValue) || [];
     const currencyExposure = calculateCurrencyExposure(dbCurrencies, holdings, totalValue) || [];
 
-    const sectorAllocation = sectorData?.sectorAllocation || [];
-    const industryAllocation = sectorData?.industryAllocation || [];
-    const regionAllocation = geoData?.regionAllocation || [];
-    const countryAllocation = geoData?.countryAllocation || [];
-
-    // STAP 6: Stats
+    const history = calculatePortfolioHistory(holdings, prices) || [];
     const stats = calculateStats(enrichedAssets, holdings, dbSectors);
-
-    // DEBUG LOG
-    console.log("📊 Snapshot Result:", {
-      totalHoldings: holdings.length,
-      totalAssets: enrichedAssets.length,
-      portfolioValue: totalValue
-    });
 
     return {
       id: `snapshot-${snapshotDate}`,
       name: userHoldings.length > 0 ? "Mijn Portfolio" : "Demo Portfolio",
       holdings,
       assetAllocation,
-      sectorAllocation,
-      industryAllocation,
-      currencyExposure,
-      regionAllocation,
-      countryAllocation,
+      sectorAllocation: sectorData?.sectorAllocation || [],
+      industryAllocation: sectorData?.industryAllocation || [],
+      currencyExposure: currencyExposure,
+      regionAllocation: geoData?.regionAllocation || [],
+      countryAllocation: geoData?.countryAllocation || [],
       marketAllocation,
-      enrichedAssets, 
+      // VERWIJDERD: enrichedAssets (bestaat niet in Portfolio type)
+      history,           
       stats,
       totalValue,
       lastUpdated: snapshotDate
     };
   } catch (error) {
     console.error("❌ Kritieke fout in Portfolio Orchestrator:", error);
-    // Veilige fallback return bij fouten
     return {
       id: "error",
-      name: "Error loading portfolio",
+      name: "Error",
       holdings: [],
       assetAllocation: [],
       sectorAllocation: [],
@@ -133,10 +112,10 @@ export const calculatePortfolioSnapshot = (
       regionAllocation: [],
       countryAllocation: [],
       marketAllocation: [],
-      enrichedAssets: [],
+      history: [],           
       stats: {} as any,
       totalValue: 0,
       lastUpdated: snapshotDate
-    };
+    } as Portfolio;
   }
 };
