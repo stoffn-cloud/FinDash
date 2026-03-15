@@ -4,13 +4,10 @@ import {
   Asset, AssetClass, AssetSector, AssetIndustry, 
   Currency, Region, Country, Market, Portfolio, 
   OHLCVHistory, EnrichedHolding, RawHolding,
-  DefaultHolding,
   RawHoldingSchema,
   OHLCVHistorySchema,
   AssetSchema
 } from "../types";
-
-import { DEFAULT_HOLDINGS } from "@/data/constants/defaultHolding"; 
 
 // Engines
 import { enrichAssets } from "./portfolio/assetEngine";
@@ -26,9 +23,11 @@ import { calculateMarketAllocation } from "./allocation/marketEngine";
 import { calculateCurrencyExposure } from "./allocation/currencyEngine";
 
 /**
- * Filtert en valideert de ruwe input van de gebruiker.
+ * Filtert en valideert de ruwe input van de gebruiker via Zod.
  */
-const prepareRawInput = (holdings: (DefaultHolding | RawHolding)[]): RawHolding[] => {
+const prepareRawInput = (holdings: any[]): RawHolding[] => {
+  if (!holdings || !Array.isArray(holdings)) return [];
+  
   return holdings
     .map((h) => {
       try {
@@ -50,26 +49,21 @@ export const calculatePortfolioSnapshot = (
   dbRegions: Region[] = [],
   dbCountries: Country[] = [],
   dbMarkets: Market[] = [],
-  userHoldings: DefaultHolding[] = [], 
+  userHoldings: any[] = [], // Nu puur de input vanuit de database
   prices: OHLCVHistory[] = [],
   snapshotDate: string = new Date().toISOString().split('T')[0]
 ): Portfolio => {
 
   try {
     // 1. INPUT VOORBEREIDING
-    // We casten naar de bekende types in plaats van 'any'
-    const inputToProcess = userHoldings.length > 0 
-      ? userHoldings 
-      : (DEFAULT_HOLDINGS as DefaultHolding[]);
+    // We gebruiken nu uitsluitend wat er binnenkomt vanuit de store/DB
+    const rawInput = prepareRawInput(userHoldings);
     
-    const rawInput = prepareRawInput(inputToProcess);
-    
-    // 2. DATA VALIDATIE & NORMALISATIE
+    // 2. DATA VALIDATIE
     const validatedPrices = (prices || []).map(p => OHLCVHistorySchema.parse(p));
     const validatedAssets = (dbAssets || []).map(a => AssetSchema.parse(a));
 
     // 3. ENRICHMENT STAGE
-    // Stap A: Verrijk de basis assets met prijzen en metadata
     const enrichedAssets = enrichAssets(
       validatedAssets, 
       validatedPrices, 
@@ -81,20 +75,18 @@ export const calculatePortfolioSnapshot = (
     ) || [];
 
     // Stap B: Verrijk de holdings (koppeling asset + user data)
-    // De weging wordt binnen enrichHoldings berekend als we totalValue later weten, 
-    // maar we berekenen eerst de absolute waarden.
     const intermediateHoldings = enrichHoldings(rawInput, enrichedAssets) || [];
 
     // Stap C: Bereken het portfolio totaal
     const totalValue = intermediateHoldings.reduce((sum, h) => sum + (Number(h.market_value) || 0), 0);
 
-    // Stap D: Werk de wegingen bij in de definitieve holdings lijst
+    // Stap D: Werk de wegingen bij
     const holdings: EnrichedHolding[] = intermediateHoldings.map((h) => ({
       ...h,
       weight: totalValue > 0 ? ((Number(h.market_value) || 0) / totalValue) * 100 : 0
     }));
 
-    // 4. ALLOCATION STAGE (De "snijders")
+    // 4. ALLOCATION STAGE
     const assetAllocation = calculateClassAllocation(dbAssetClasses, dbCurrencies, holdings, totalValue) || [];
     const sectorData = calculateSectorAllocation(dbSectors, dbIndustries, holdings, totalValue);
     const geoData = calculateGeoAllocation(dbCountries, dbRegions, holdings, totalValue);
@@ -105,14 +97,14 @@ export const calculatePortfolioSnapshot = (
     const history = calculatePortfolioHistory(holdings, validatedPrices) || [];
     const stats = calculateStats(enrichedAssets, holdings, dbSectors);
 
-    // 6. DEBUG LOGGING
+    // 6. DEBUG LOGGING (Cruciaal voor je testfase)
     if (process.env.NODE_ENV === 'development') {
-      console.group("🕵️ Portfolio Engine Heartbeat");
+      console.group("🕵️ Portfolio Engine Heartbeat (Live Data Only)");
       console.log("Total Value:", totalValue);
-      console.log("Holdings Count:", holdings.length);
-      console.log("History Points:", history.length);
+      console.log("Valid Holdings:", holdings.length);
+      console.log("History Data Points:", history.length);
       if (history.length > 0) {
-        console.log("Date Range:", history[0].date, "to", history[history.length - 1].date);
+        console.log("Range:", history[0].date, "to", history[history.length - 1].date);
       }
       console.groupEnd();
     }
@@ -120,7 +112,7 @@ export const calculatePortfolioSnapshot = (
     // 7. RESULTAAT SAMENSTELLEN
     return {
       id: `snapshot-${snapshotDate}`,
-      name: userHoldings.length > 0 ? "Mijn Portfolio" : "Demo Portfolio",
+      name: "Mijn Portfolio",
       holdings,
       enrichedAssets, 
       assetAllocation,
@@ -143,9 +135,6 @@ export const calculatePortfolioSnapshot = (
   }
 };
 
-/**
- * Fallback functie in geval van fouten.
- */
 const createEmptyPortfolio = (date: string): Portfolio => ({
   id: "error",
   name: "Error",
