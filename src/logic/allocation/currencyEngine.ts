@@ -3,37 +3,50 @@ import { calcWeight } from "../core/math";
 
 /**
  * Berekent de blootstelling (Exposure) aan verschillende valuta's.
- * Dit laat zien in welke valuta je assets genoteerd staan in je portfolio.
+ * Helpt bij het in kaart brengen van het wisselkoersrisico.
  */
 export const calculateCurrencyExposure = (
-  dbCurrencies: Currency[] = [],     // Default naar lege array
-  holdings: EnrichedHolding[] = [],  // Default naar lege array
+  dbCurrencies: Currency[] = [],
+  holdings: EnrichedHolding[] = [],
   totalValue: number = 0
 ): EnrichedCurrency[] => {
   
-  // 1. VEILIGHEIDSCHECK: Voorkom crashes bij ontbrekende valuta-data
-  if (!dbCurrencies || !Array.isArray(dbCurrencies)) return [];
+  // 1. VEILIGHEIDSCHECK
+  if (!dbCurrencies || !Array.isArray(dbCurrencies) || dbCurrencies.length === 0) {
+    return [];
+  }
 
   return dbCurrencies
-    .map(curr => {
-      // 2. FILTER: Zoek holdings die in deze valuta genoteerd staan
-      // We gebruiken (h as any) omdat de currencies_id uit de verrijkte Asset-data komt
-      const holdingsInCurr = holdings.filter(h => 
-        (h as any).currencies_id === curr.currencies_id
+    .map((curr) => {
+      // 2. FILTER: Match holdings op currencies_id
+      // Omdat de holding verrijkt is, zit currencies_id direct in het object
+      const holdingsInCurr = holdings.filter(
+        (h) => Number(h.currencies_id) === Number(curr.currencies_id)
       );
       
-      const valueInCurr = holdingsInCurr.reduce((sum, h) => sum + (h.marketValue || 0), 0);
+      // 3. AGGREGATIE: Gebruik de snake_case market_value
+      const valueInCurr = holdingsInCurr.reduce(
+        (sum, h) => sum + (Number(h.market_value) || 0), 
+        0
+      );
       
       return {
         ...curr,
+        // UI Helpers voor consistentie met andere engines
         id: curr.currencies_id,
         name: curr.full_name || curr.ISO_code,
+        code: curr.ISO_code,
         current_value: valueInCurr,
-        // Gebruik de centrale helper voor de weging in het totaal
-        allocation_percent: calcWeight(valueInCurr, totalValue)
-      };
+        
+        // 4. WEGING: Bereken het percentage t.o.v. de meegegeven totalValue
+        // Merk op: als totalValue de waarde van een AssetClass is, krijg je de mix BINNEN die klasse.
+        allocation_percent: calcWeight(valueInCurr, totalValue),
+        
+        // Optioneel: voeg vlag-iconen of kleuren toe op basis van ISO code
+        color: curr.ISO_code === 'USD' ? '#22C55E' : curr.ISO_code === 'EUR' ? '#3B82F6' : '#94A3B8'
+      } as EnrichedCurrency;
     })
-    // 3. CLEANUP: Filter valuta's zonder posities en sorteer op grootte
-    .filter(c => c.current_value > 0)
+    // 5. CLEANUP: Toon alleen valuta's waar je daadwerkelijk geld in hebt zitten
+    .filter((c) => c.current_value > 0)
     .sort((a, b) => b.current_value - a.current_value);
 };

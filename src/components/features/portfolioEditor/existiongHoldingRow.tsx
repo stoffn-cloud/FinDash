@@ -1,17 +1,26 @@
 "use client";
 
-import { Trash2, Calendar, DollarSign, Layers, Info } from "lucide-react";
+import { Trash2, Calendar, DollarSign, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const ExistingHoldingRow = ({ holding, onDelete, isDemoMode, availableAssets = [] }: any) => {
-  // Zoek de volledige asset informatie op basis van de ticker_id in de holding
+  // Zoek de volledige asset informatie op basis van de ticker_id
   const assetInfo = availableAssets.find((a: any) => Number(a.ticker_id) === Number(holding.ticker_id));
+
+  // Helper om te voorkomen dat new Date(undefined) een crash veroorzaakt
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "No Date";
+    const date = new Date(dateString);
+    return isNaN(date.getTime()) 
+      ? "Invalid Date" 
+      : date.toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
 
   return (
     <div className="group flex items-center justify-between p-4 rounded-2xl border border-white/5 bg-slate-950/40 hover:bg-slate-900/60 hover:border-blue-500/20 transition-all duration-300">
       <div className="flex items-center gap-8">
         
-        {/* 1. INSTRUMENT (Ticker + Full Name) */}
+        {/* 1. INSTRUMENT */}
         <div className="min-w-[140px] max-w-[200px]">
           <span className="flex items-center gap-1 text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">
             Instrument
@@ -26,22 +35,24 @@ export const ExistingHoldingRow = ({ holding, onDelete, isDemoMode, availableAss
           </div>
         </div>
 
-        {/* 2. DATE */}
+        {/* 2. DATE - FIX: purchaseDate -> purchase_date */}
         <div>
           <span className="flex items-center gap-1 text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">
             <Calendar className="w-2.5 h-2.5" /> Date
           </span>
           <span className="text-xs text-slate-300 font-medium">
-            {new Date(holding.purchaseDate).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' })}
+            {formatDate(holding.purchase_date)}
           </span>
         </div>
 
-        {/* 3. PRICE */}
+        {/* 3. PRICE - FIX: purchasePrice -> purchase_price */}
         <div>
           <span className="flex items-center gap-1 text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">
             <DollarSign className="w-2.5 h-2.5" /> Price
           </span>
-          <span className="text-xs text-emerald-400 font-mono font-bold">${Number(holding.purchasePrice).toFixed(2)}</span>
+          <span className="text-xs text-emerald-400 font-mono font-bold">
+            ${Number(holding.purchase_price || 0).toFixed(2)}
+          </span>
         </div>
 
         {/* 4. QUANTITY */}
@@ -54,7 +65,7 @@ export const ExistingHoldingRow = ({ holding, onDelete, isDemoMode, availableAss
       </div>
 
       <div className="flex items-center gap-2">
-         {holding.ticker_id === 0 && (
+         {(!holding.purchase_date || holding.ticker_id === 0) && (
           <span className="text-[8px] bg-rose-500/10 text-rose-500 border border-rose-500/20 px-2 py-1 rounded-full uppercase font-black animate-pulse">
             Fix Required
           </span>

@@ -1,69 +1,70 @@
 import { EnrichedHolding, OHLCVHistory, PortfolioHistoryPoint } from "@/types";
 
+/**
+ * Berekent de historische waarde van de gehele portefeuille over een tijdlijn.
+ * Gebruikt een 'Daily Bucket' benadering voor maximale accuraatheid.
+ */
 export const calculatePortfolioHistory = (
-  holdings: EnrichedHolding[], 
-  allPrices: OHLCVHistory[]
+  holdings: EnrichedHolding[] = [], 
+  allPrices: OHLCVHistory[] = []
 ): PortfolioHistoryPoint[] => {
-  // 1. Veiligheidscheck
-  if (!holdings?.length || !allPrices?.length) {
-    console.warn("⚠️ [History Engine] Onvoldoende data voor historie:", { 
-      holdings: holdings?.length, 
-      prices: allPrices?.length 
-    });
-    return [];
-  }
+  // 1. VEILIGHEIDSCHECK
+  if (!holdings.length || !allPrices.length) return [];
 
   const history: PortfolioHistoryPoint[] = [];
 
   try {
-    // 2. Map prijzen voor snelle lookup
-    // We normaliseren de datum naar YYYY-MM-DD om tijdverschillen te elimineren
+    // 2. PRIJS LOOKUP MAP
+    // We gebruiken ticker_id en date_id als unieke sleutel voor razendsnelle toegang.
     const priceMap = new Map<string, number>();
     allPrices.forEach(p => {
-      if (p.date_id && p.ticker_id) {
-        const dateKey = p.date_id.split('T')[0];
-        priceMap.set(`${p.ticker_id}-${dateKey}`, Number(p.close_price));
-      }
+      const dateKey = p.date_id.split('T')[0]; // Zorg voor YYYY-MM-DD formaat
+      priceMap.set(`${p.ticker_id}-${dateKey}`, Number(p.close_price) || 0);
     });
 
-    // 3. Unieke datums sorteren
-    const uniqueDates = Array.from(
-      new Set(
-        allPrices
-          .filter(p => p.date_id)
-          .map(p => p.date_id.split('T')[0])
-      )
-    ).sort();
+    // 3. BEREIK BEPALEN
+    // Start bij de oudste aankoop, eindig op de laatste datum in de prijs-dataset (of vandaag)
+    const sortedPurchaseDates = holdings
+      .map(h => h.purchase_date)
+      .filter(Boolean)
+      .sort();
+      
+    const startDateStr = sortedPurchaseDates[0] || "2025-01-01";
+    
+    // Dynamisch eindpunt: pak de allerlaatste datum uit je prijs-dataset
+    const allAvailableDates = Array.from(new Set(allPrices.map(p => p.date_id.split('T')[0]))).sort();
+    const endDateStr = allAvailableDates[allAvailableDates.length - 1] || startDateStr;
 
-    // 4. Bereken de waarde van de portfolio per dag
-    uniqueDates.forEach(dateStr => {
+    // 4. TIJDLIJN GENEREREN
+    // We lopen alleen door datums waar we daadwerkelijk prijzen voor hebben
+    const timelineDates = allAvailableDates.filter(d => d >= startDateStr && d <= endDateStr);
+
+    // 5. HISTORIE OPBOUWEN
+    let lastKnownTotal = 0;
+
+    timelineDates.forEach(dateStr => {
       let dailyTotal = 0;
-      let hasDataForThisDay = false;
+      let hasAssetsOnThisDate = false;
 
       holdings.forEach(holding => {
-        if (!holding.ticker_id) return;
-
-        // MATCHING FIX: We gebruiken nu de snake_case namen uit onze nieuwe EnrichedHolding interface
-        const price = priceMap.get(`${holding.ticker_id}-${dateStr}`);
-        
-        // Zorg voor een zuivere YYYY-MM-DD vergelijking
-        const pDate = holding.purchase_date 
-          ? String(holding.purchase_date).split('T')[0] 
-          : "1970-01-01";
-
-        // Alleen meetellen als de holding op of na de aankoopdatum valt
-        if (pDate <= dateStr) {
-          // Als we voor deze dag geen specifieke prijs hebben, gebruiken we de aankoopprijs
-          const currentPrice = price !== undefined ? price : (Number(holding.purchase_price) || 0);
-          const qty = Number(holding.quantity) || 0;
+        // Tel de holding alleen mee als deze op of voor deze datum gekocht is
+        if (holding.purchase_date <= dateStr) {
+          const price = priceMap.get(`${holding.ticker_id}-${dateStr}`);
           
-          dailyTotal += (qty * currentPrice);
-          hasDataForThisDay = true;
+          // Fallback strategie: 
+          // 1. Prijs uit de DB op die dag
+          // 2. Als die ontbreekt: de aankoopprijs (om de lijn niet naar 0 te laten vallen)
+          const effectivePrice = (price !== undefined && price > 0) 
+            ? price 
+            : (Number(holding.purchase_price) || 0);
+
+          dailyTotal += (Number(holding.quantity) * effectivePrice);
+          hasAssetsOnThisDate = true;
         }
       });
 
-      // Alleen punten toevoegen waar we echt assets in bezit hadden
-      if (hasDataForThisDay && dailyTotal > 0) {
+      if (hasAssetsOnThisDate) {
+        lastKnownTotal = dailyTotal;
         history.push({
           date: dateStr,
           total_value: Number(dailyTotal.toFixed(2))
@@ -71,9 +72,13 @@ export const calculatePortfolioHistory = (
       }
     });
 
+    // 6. DEBUG LOG (Alleen in dev)
+    if (history.length === 1) {
+      console.warn("⚠️ History Engine genereerde slechts 1 datapunt. Check of purchase_dates en price dates_id's matchen.");
+    }
+
   } catch (err) {
-    console.error("❌ Fout tijdens historie berekening:", err);
-    return [];
+    console.error("❌ Kritieke fout in History Engine:", err);
   }
 
   return history;

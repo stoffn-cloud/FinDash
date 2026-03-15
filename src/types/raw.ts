@@ -1,135 +1,121 @@
 import { z } from "zod";
 
-// Helper om MySQL TINYINT (0/1) naar Boolean te vertalen
-const mysqlBoolean = z.number().transform((val) => val === 1);
-
-// --- HOLDINGS (De rauwe data uit de database of adapter)
-export const RawHoldingSchema = z.object({
-  ticker_id: z.number(),
-  quantity: z.number(),
-  purchase_price: z.number(),
-  purchase_date: z.string(), // SQL DATE komt binnen als string 'YYYY-MM-DD'
-});
+// --- HELPERS
+/**
+ * Vertaalt MySQL TINYINT (0/1) naar een echte Boolean.
+ */
+const mysqlBoolean = z.preprocess(
+  (val) => (typeof val === "number" ? val === 1 : val),
+  z.boolean()
+);
 
 /**
- * RawHolding: De machine-leesbare link tussen een transactie en een asset.
- * Wordt gebruikt als input voor de Portfolio Engine.
+ * Maakt van elke input (string, null, etc.) een bruikbaar nummer.
+ * Cruciaal voor prijzen die als "271.86" uit de DB komen.
  */
+const robustNumber = z.coerce.number().default(0);
+
+// --- HOLDINGS
+/**
+ * Normaliseert inkomende holdings van CamelCase (API/Legacy) naar snake_case (DB/Engine).
+ * Zorgt ook dat datums beperkt blijven tot de dag (YYYY-MM-DD).
+ */
+export const RawHoldingSchema = z.preprocess((obj: any) => {
+  if (!obj || typeof obj !== 'object') return obj;
+  
+  // Datum normalisatie: pak de eerste 10 karakters van de string
+  const rawDate = obj.purchase_date ?? obj.purchaseDate;
+  const formattedDate = typeof rawDate === 'string' ? rawDate.split('T')[0] : rawDate;
+
+  return {
+    ...obj,
+    purchase_price: obj.purchase_price ?? obj.purchasePrice,
+    purchase_date: formattedDate,
+  };
+}, z.object({
+  id: z.number().optional(),
+  ticker_id: robustNumber,
+  quantity: robustNumber,
+  purchase_price: robustNumber,
+  purchase_date: z.string().default(() => new Date().toISOString().split('T')[0]),
+}));
+
 export type RawHolding = z.infer<typeof RawHoldingSchema>;
-
-// Optioneel: Als je vaker met lijstjes holdings werkt
-export type RawPortfolio = RawHolding[];
-
 
 // --- ASSETS
 export const AssetSchema = z.object({
-  ticker_id: z.number(),
+  ticker_id: robustNumber,
   ticker: z.string(),
   full_name: z.string(),
-  ISIN: z.string(), // SQL: NOT NULL
-  markets_id: z.number(),
-  asset_classes_id: z.number(),
-  currencies_id: z.number(),
-  asset_industries_id: z.number(),
-  countries_id: z.number(),
+  ISIN: z.string().default(""),
+  markets_id: robustNumber,
+  asset_classes_id: robustNumber,
+  currencies_id: robustNumber,
+  asset_industries_id: robustNumber,
+  asset_sectors_id: robustNumber.optional(), 
+  countries_id: robustNumber,
 });
 export type Asset = z.infer<typeof AssetSchema>;
 
-// --- ASSET_CLASSES
+// --- HISTORY TABLES (Cruciaal voor prijzen)
+export const OHLCVHistorySchema = z.object({
+  ticker_id: robustNumber,
+  date_id: z.string().transform(val => val.split('T')[0]), // Altijd YYYY-MM-DD
+  open_price: robustNumber.nullable(),
+  high_price: robustNumber.nullable(),
+  low_price: robustNumber.nullable(),
+  close_price: robustNumber, // Mag nooit null zijn voor berekeningen
+  Volume: robustNumber.nullable(),
+});
+export type OHLCVHistory = z.infer<typeof OHLCVHistorySchema>;
+
+// --- OVERIGE ENTITEITEN
 export const AssetClassSchema = z.object({
-  asset_classes_id: z.number(),
+  asset_classes_id: robustNumber,
   asset_class: z.string(),
-  description: z.string(), // SQL: NOT NULL
+  description: z.string().default(""),
 });
 export type AssetClass = z.infer<typeof AssetClassSchema>;
 
-// --- SECTORS & INDUSTRIES
 export const AssetSectorSchema = z.object({
-  asset_sectors_id: z.number(),
+  asset_sectors_id: robustNumber,
   GICS_name: z.string(),
-  description: z.string(),
+  description: z.string().default(""),
 });
 export type AssetSector = z.infer<typeof AssetSectorSchema>;
 
 export const AssetIndustrySchema = z.object({
-  asset_industries_id: z.number(),
-  asset_sectors_id: z.number(),
+  asset_industries_id: robustNumber,
+  asset_sectors_id: robustNumber,
   description: z.string(),
 });
 export type AssetIndustry = z.infer<typeof AssetIndustrySchema>;
 
-// --- GEOGRAPHY & MARKETS
 export const CountrySchema = z.object({
-  countries_id: z.number(),
-  regions_id: z.number(),
+  countries_id: robustNumber,
+  regions_id: robustNumber,
   ISO_code: z.string(),
   full_name: z.string(),
 });
 export type Country = z.infer<typeof CountrySchema>;
 
 export const RegionSchema = z.object({
-  regions_id: z.number(),
+  regions_id: robustNumber,
   region_code: z.string(),
   description: z.string(),
 });
 export type Region = z.infer<typeof RegionSchema>;
 
 export const MarketSchema = z.object({
-  markets_id: z.number(),
+  markets_id: robustNumber,
   markets_abbreviation: z.string(),
   full_name: z.string(),
 });
 export type Market = z.infer<typeof MarketSchema>;
 
 export const CurrencySchema = z.object({
-  currencies_id: z.number(),
+  currencies_id: robustNumber,
   ISO_code: z.string(),
   full_name: z.string(),
 });
 export type Currency = z.infer<typeof CurrencySchema>;
-
-// --- DATE DIMENSION (Nieuw: day_of_week toegevoegd)
-export const DateDimSchema = z.object({
-  date_id: z.string(), // DATE type komt vaak als string binnen
-  year: z.number(),
-  quarter: z.number(),
-  quarter_abbreviation: z.string(),
-  month: z.number(),
-  month_name: z.string(),
-  day: z.number(),
-  day_name: z.string(),
-  day_of_week: z.number(),
-  is_weekend: mysqlBoolean,
-  is_quarter_end: mysqlBoolean,
-  is_year_end: mysqlBoolean,
-});
-export type DateDim = z.infer<typeof DateDimSchema>;
-
-// --- HISTORY TABLES (Let op de underscores)
-export const OHLCVHistorySchema = z.object({
-  ticker_id: z.number(),
-  date_id: z.string(),
-  open_price: z.number(),
-  high_price: z.number(),
-  low_price: z.number(),
-  close_price: z.number(),
-  Volume: z.number().nullable(),
-});
-export type OHLCVHistory = z.infer<typeof OHLCVHistorySchema>;
-
-export const PerformanceHistorySchema = z.object({
-  ticker_id: z.number(),
-  date_id: z.string(),
-  return_pct: z.number(),
-});
-export type PerformanceHistory = z.infer<typeof PerformanceHistorySchema>;
-
-// --- MARKET CALENDAR
-export const MarketCalendarSchema = z.object({
-  markets_id: z.number(),
-  date: z.string(),
-  is_open: mysqlBoolean.nullable(),
-  market_status: z.string(),
-  reason: z.string(),
-});
-export type MarketCalendar = z.infer<typeof MarketCalendarSchema>;

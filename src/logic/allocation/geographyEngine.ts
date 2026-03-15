@@ -2,51 +2,65 @@ import { Country, Region, EnrichedCountry, EnrichedRegion, EnrichedHolding } fro
 import { calcWeight } from "../core/math";
 
 /**
- * Berekent de geografische verdeling (Landen & Regio's) van de portefeuille.
- * Inclusief verdedigingsmechanismen tegen undefined data.
+ * We breiden de bestaande types uit voor intern gebruik in de engine.
+ * Dit voorkomt 'as any' en geeft volledige autocomplete.
  */
+interface CountryWithGeoMetrics extends EnrichedCountry {
+  holding_count?: number;
+  allocation_region_percent?: number;
+}
+
+interface RegionWithGeoMetrics extends EnrichedRegion {
+  color: string;
+  countries: CountryWithGeoMetrics[];
+}
+
 export const calculateGeoAllocation = (
-  dbCountries: Country[] = [],     // Default naar lege array
-  dbRegions: Region[] = [],        // Default naar lege array
+  dbCountries: Country[] = [],
+  dbRegions: Region[] = [],
   holdings: EnrichedHolding[] = [],
   totalValue: number = 0
-) => {
-  // 1. VEILIGHEIDSCHECK: Voorkom crashes bij ontbrekende database tabellen
-  if (!dbCountries || !Array.isArray(dbCountries)) {
+): { regionAllocation: RegionWithGeoMetrics[], countryAllocation: EnrichedCountry[] } => {
+  
+  if (!dbCountries || !Array.isArray(dbCountries) || !Array.isArray(dbRegions)) {
     return { regionAllocation: [], countryAllocation: [] };
   }
 
-  // 2. BEREKEN LANDEN
-  const countryAllocation: EnrichedCountry[] = dbCountries
+  // 1. BEREKEN LANDEN
+  const countryAllocation: CountryWithGeoMetrics[] = dbCountries
     .map((country) => {
-      // Gebruik 'as any' omdat countries_id in de verrijkte Asset-data zit
-      const holdingsInCountry = holdings.filter(h => 
-        (h as any).countries_id === country.countries_id
+      const holdingsInCountry = holdings.filter(
+        (h) => Number(h.countries_id) === Number(country.countries_id)
       );
       
-      const countryValue = holdingsInCountry.reduce((sum, h) => sum + (h.marketValue || 0), 0);
+      const countryValue = holdingsInCountry.reduce(
+        (sum, h) => sum + (Number(h.market_value) || 0), 
+        0
+      );
       
       return {
         ...country,
         id: country.countries_id,
         name: country.full_name || "Unknown Country",
         current_value: countryValue,
-        allocation_total_percent: calcWeight(countryValue, totalValue),
-        allocation_region_percent: 0, // Wordt hieronder berekend
-        holding_count: holdingsInCountry.length
+        allocation_percent: calcWeight(countryValue, totalValue),
+        holding_count: holdingsInCountry.length,
       };
     })
     .filter(c => c.current_value > 0)
     .sort((a, b) => b.current_value - a.current_value);
 
-  // 3. BEREKEN REGIO'S (Geaggregeerd op basis van de landen-lijst)
-  const safeRegions = Array.isArray(dbRegions) ? dbRegions : [];
-
-  const regionAllocation: EnrichedRegion[] = safeRegions
+  // 2. BEREKEN REGIO'S
+  const regionAllocation: RegionWithGeoMetrics[] = dbRegions
     .map((reg, idx) => {
-      // Filter landen die tot deze regio behoren uit onze al berekende countryAllocation
-      const countriesInRegion = countryAllocation.filter(c => c.regions_id === reg.regions_id);
-      const regionValue = countriesInRegion.reduce((sum, c) => sum + c.current_value, 0);
+      const countriesInRegion = countryAllocation.filter(
+        (c) => Number(c.regions_id) === Number(reg.regions_id)
+      );
+      
+      const regionValue = countriesInRegion.reduce(
+        (sum, c) => sum + c.current_value, 
+        0
+      );
 
       return {
         ...reg,
@@ -54,12 +68,11 @@ export const calculateGeoAllocation = (
         name: reg.description || "Unknown Region",
         current_value: regionValue,
         allocation_percent: calcWeight(regionValue, totalValue),
-        holding_count: countriesInRegion.reduce((sum, c) => sum + c.holding_count, 0),
-        // Dynamische kleuren voor de wereldkaart of charts
-        color: `hsl(${(idx * 145) % 360}, 60%, 45%)`, 
+        // We gebruiken de holding_count die we in stap 1 al berekend hebben
+        holding_count: countriesInRegion.reduce((sum, c) => sum + (c.holding_count || 0), 0),
+        color: `hsl(${(idx * 137) % 360}, 65%, 50%)`, 
         countries: countriesInRegion.map(c => ({
           ...c,
-          // Bereken hoe zwaar dit land weegt BINNEN zijn eigen regio
           allocation_region_percent: calcWeight(c.current_value, regionValue)
         }))
       };

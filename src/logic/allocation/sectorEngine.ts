@@ -5,30 +5,46 @@ import {
 import { calcWeight } from "../core/math";
 
 /**
+ * Lokale interfaces om de types uit te breiden zonder 'as any'.
+ */
+interface SectorResult extends EnrichedAssetSector {
+  holding_count: number;
+  color: string;
+}
+
+interface IndustryResult extends EnrichedAssetIndustry {
+  allocation_total_percent: number;
+  allocation_sector_percent: number;
+  holding_count: number;
+  color: string;
+}
+
+/**
  * Berekent de verdeling van de portfolio over Sectoren en Industrieën.
- * Inclusief veiligheidschecks om crashes bij ontbrekende data te voorkomen.
  */
 export const calculateSectorAllocation = (
-  dbSectors: AssetSector[] = [],    // Default naar lege array
-  dbIndustries: AssetIndustry[] = [], // Default naar lege array
+  dbSectors: AssetSector[] = [],
+  dbIndustries: AssetIndustry[] = [],
   holdings: EnrichedHolding[] = [],
   totalValue: number = 0
-) => {
-  // 1. VEILIGHEIDSCHECK: Voorkom .map() op undefined/null
+): { sectorAllocation: SectorResult[], industryAllocation: IndustryResult[] } => {
+  
   if (!dbSectors || !Array.isArray(dbSectors)) {
     return { sectorAllocation: [], industryAllocation: [] };
   }
 
-  // 2. BEREKEN SECTOREN
-  const sectorAllocation: EnrichedAssetSector[] = dbSectors
+  // 1. BEREKEN SECTOREN
+  const sectorAllocation: SectorResult[] = dbSectors
     .map((sec, idx) => {
-      // Filter holdings die bij deze sector horen. 
-      // We gebruiken 'as any' omdat de sector_id uit de verrijkte Asset-data komt.
-      const holdingsInSector = holdings.filter(h => 
-        (h as any).asset_sectors_id === sec.asset_sectors_id
+      // Gebruik Number() voor veilige ID vergelijking en snake_case asset_sectors_id
+      const holdingsInSector = holdings.filter(
+        (h) => Number(h.asset_sectors_id) === Number(sec.asset_sectors_id)
       );
       
-      const sectorValue = holdingsInSector.reduce((sum, h) => sum + (h.marketValue || 0), 0);
+      const sectorValue = holdingsInSector.reduce(
+        (sum, h) => sum + (Number(h.market_value) || 0), 
+        0
+      );
       
       return {
         ...sec,
@@ -37,38 +53,42 @@ export const calculateSectorAllocation = (
         current_value: sectorValue,
         allocation_percent: calcWeight(sectorValue, totalValue),
         holding_count: holdingsInSector.length,
-        // Dynamische kleur voor de donut chart (gulden snede spreiding)
         color: `hsl(${(idx * 137.5) % 360}, 65%, 50%)` 
-      };
+      } as SectorResult;
     })
-    .filter(s => s.current_value > 0) // Alleen actieve sectoren tonen
+    .filter(s => s.current_value > 0)
     .sort((a, b) => b.current_value - a.current_value);
 
-  // 3. BEREKEN INDUSTRIEËN (Gedetailleerder niveau)
+  // 2. BEREKEN INDUSTRIEËN
   const safeIndustries = Array.isArray(dbIndustries) ? dbIndustries : [];
   
-  const industryAllocation: EnrichedAssetIndustry[] = safeIndustries
+  const industryAllocation: IndustryResult[] = safeIndustries
     .map((ind) => {
-      // Filter holdings die bij deze industrie horen
-      const holdingsInInd = holdings.filter(h => 
-        (h as any).asset_industries_id === ind.asset_industries_id
+      const holdingsInInd = holdings.filter(
+        (h) => Number(h.asset_industries_id) === Number(ind.asset_industries_id)
       );
       
-      const indValue = holdingsInInd.reduce((sum, h) => sum + (h.marketValue || 0), 0);
+      const indValue = holdingsInInd.reduce(
+        (sum, h) => sum + (Number(h.market_value) || 0), 
+        0
+      );
       
-      // Zoek de bovenliggende sector op voor relatieve weging binnen de sector
-      const parentSector = sectorAllocation.find(s => s.id === ind.asset_sectors_id);
+      // Zoek de bovenliggende sector op voor relatieve weging
+      const parentSector = sectorAllocation.find(
+        (s) => Number(s.id) === Number(ind.asset_sectors_id)
+      );
       
       return {
         ...ind,
         id: ind.asset_industries_id,
         name: ind.description || "Unknown Industry",
         current_value: indValue,
+        allocation_percent: calcWeight(indValue, totalValue), // Standaard veld uit interface
         allocation_total_percent: calcWeight(indValue, totalValue),
         allocation_sector_percent: calcWeight(indValue, parentSector?.current_value ?? 0),
         holding_count: holdingsInInd.length,
-        color: "#94A3B8" // Neutrale kleur voor sub-levels
-      };
+        color: "#94A3B8"
+      } as IndustryResult;
     })
     .filter(i => i.current_value > 0)
     .sort((a, b) => b.current_value - a.current_value);

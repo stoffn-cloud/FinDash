@@ -2,45 +2,47 @@ import { Market, EnrichedMarket, EnrichedHolding } from "@/types";
 import { calcWeight } from "../core/math";
 
 /**
- * Berekent de verdeling van de portefeuille over de verschillende aandelenmarkten.
- * Bevat fallbacks voor undefined data om runtime crashes te voorkomen.
+ * We definiëren precies wat de Engine teruggeeft.
+ * Dit voorkomt dat we 'any' moeten gebruiken.
  */
+export type MarketAllocationResult = EnrichedMarket & {
+  holding_count: number;
+  color: string;
+};
+
 export const calculateMarketAllocation = (
-  dbMarkets: Market[] = [],       // Default naar lege array
-  holdings: EnrichedHolding[] = [], // Default naar lege array
+  dbMarkets: Market[] = [],
+  holdings: EnrichedHolding[] = [],
   totalValue: number = 0
-): EnrichedMarket[] => {
+): MarketAllocationResult[] => {
   
-  // 1. VEILIGHEIDSCHECK: Voorkom .map() op undefined
   if (!dbMarkets || !Array.isArray(dbMarkets)) return [];
 
   return dbMarkets
     .map((m, idx) => {
-      // 2. FILTER: Zoek holdings in deze markt.
-      // We gebruiken (h as any) omdat markets_id uit de verrijkte Asset-data komt.
       const holdingsInMarket = holdings.filter(
-        (h) => (h as any).markets_id === m.markets_id
+        (h) => Number(h.markets_id) === Number(m.markets_id)
       );
 
-      // 3. REDUCE: Bereken de totale marktwaarde voor deze beurs
       const marketValue = holdingsInMarket.reduce(
-        (sum, h) => sum + (h.marketValue || 0), 
+        (sum, h) => sum + (Number(h.market_value) || 0), 
         0
       );
 
-      return {
+      // Hier bouwen we het object zonder 'any'
+      const result: MarketAllocationResult = {
         ...m,
         id: m.markets_id,
-        name: m.full_name || "Unknown Exchange",
+        // We gebruiken alleen velden die gegarandeerd in het Market type zitten
+        name: m.full_name || m.markets_abbreviation || "Unknown Exchange",
         current_value: marketValue,
-        // Gebruik de centrale helper voor consistentie
         allocation_percent: calcWeight(marketValue, totalValue),
         holding_count: holdingsInMarket.length,
-        // Blauw-getinte dynamische kleuren voor een professionele look
-        color: `hsl(210, 70%, ${30 + (idx * 10) % 40}%)` 
+        color: `hsl(217, 91%, ${30 + (idx * 8) % 40}%)` 
       };
+
+      return result;
     })
-    // 4. CLEANUP: Verwijder markten zonder posities en sorteer op grootte
     .filter((market) => market.current_value > 0)
     .sort((a, b) => b.current_value - a.current_value);
 };

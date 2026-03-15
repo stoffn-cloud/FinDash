@@ -12,13 +12,16 @@ import {
 /**
  * 0. INPUT INTERFACES
  * Gebruikt voor handmatige invoer of mock-data.
- * Matcht met RawHoldingSchema voor naadloze validatie.
  */
 export interface DefaultHolding {
+  id?: number;
   ticker_id: number;
   quantity: number;
   purchase_price: number;
-  purchase_date: string; // 'YYYY-MM-DD'
+  purchase_date: string;
+  // Optionele CamelCase ondersteuning voor legacy compatibiliteit
+  purchasePrice?: number;
+  purchaseDate?: string;
 }
 
 /**
@@ -43,7 +46,6 @@ export interface EnrichedAsset extends Asset {
 
 /**
  * Verrijkte Holding: De koppeling tussen je portefeuilledata en assetinformatie.
- * We gebruiken snake_case om 1-op-1 te matchen met de RawHolding uit de DB.
  */
 export interface EnrichedHolding extends EnrichedAsset {
   id: number;               
@@ -52,11 +54,15 @@ export interface EnrichedHolding extends EnrichedAsset {
   purchase_date: string;     
   
   // Berekende waarden (Financials)
-  cost_basis: number;       // quantity * purchase_price
-  market_value: number;     // quantity * current_price
-  pnl_absolute: number;     // market_value - cost_basis
+  cost_basis: number;       
+  market_value: number;     
+  pnl_absolute: number;     
   pnl_percentage: number;   
-  weight: number;           // % van totale portfolio
+  weight: number;           
+  
+  // Voor UI-rendering fallback
+  symbol: string;
+  name: string;
 }
 
 /**
@@ -136,16 +142,14 @@ export interface PortfolioStats {
   highest_holding_weight: number;
 }
 
-/**
- * Datapunt voor de PerformanceChart (Recharts)
- */
 export interface PortfolioHistoryPoint {
-  date: string;         // 'YYYY-MM-DD'
+  date: string;         
   total_value: number;
 }
 
 /**
  * De Master Portfolio Object
+ * Zorg dat deze namen EXACT zo uit de Orchestrator komen.
  */
 export interface Portfolio {
   id: string;
@@ -158,6 +162,8 @@ export interface Portfolio {
   sectorAllocation: EnrichedAssetSector[];
   industryAllocation: EnrichedAssetIndustry[];
   currencyExposure: EnrichedCurrency[];
+  // Fallback voor UI componenten die 'currencyAllocation' zoeken
+  currencyAllocation?: EnrichedCurrency[]; 
   regionAllocation: EnrichedRegion[];
   countryAllocation: EnrichedCountry[];
   marketAllocation: EnrichedMarket[];

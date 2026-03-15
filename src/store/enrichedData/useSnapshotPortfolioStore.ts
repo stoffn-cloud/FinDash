@@ -1,7 +1,9 @@
+"use client";
+
 import { create } from 'zustand';
 import { calculatePortfolioSnapshot } from '@/logic/engineOrchestrator';
 import { DEFAULT_HOLDINGS } from '@/data/constants/defaultHolding';
-import { Portfolio, DefaultHolding, EnrichedAsset } from '@/types';
+import { Portfolio, DefaultHolding } from '@/types';
 
 interface PortfolioState {
   portfolio: Portfolio | null;
@@ -18,13 +20,17 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
 
   setDemoLocked: (locked) => {
     set({ isDemoLocked: locked });
+    // Optioneel: herbereken portfolio direct als de lock wijzigt
   },
 
   updatePortfolio: (data) => {
+    if (!data) return;
+
     try {
       const { isDemoLocked } = get();
 
-      // 1. Data extractie
+      // 1. Data extractie & Fallbacks
+      // We zorgen dat we altijd arrays doorgeven aan de Orchestrator
       const assets = data.dbAssets || data.assets || [];
       const classes = data.dbAssetClasses || data.classes || [];
       const sectors = data.dbSectors || data.sectors || [];
@@ -33,16 +39,17 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
       const regions = data.dbRegions || data.regions || [];
       const countries = data.dbCountries || data.countries || [];
       const markets = data.dbMarkets || data.markets || [];
-      const prices = data.prices || []; // Zorg dat dit een array is
+      const prices = data.prices || [];
       
       // 2. Holdings bepalen
+      // De orchestrator zal deze 'DefaultHolding' omzetten naar de correcte 'RawHolding' (snake_case)
       const userHoldingsFromDb = data.userHoldings || [];
       const activeHoldings = (isDemoLocked || userHoldingsFromDb.length === 0) 
         ? (DEFAULT_HOLDINGS as unknown as DefaultHolding[]) 
         : userHoldingsFromDb;
 
       // 3. Bereken de snapshot via de Orchestrator
-      // Deze snapshot bevat nu de snake_case financials (market_value, etc.)
+      // De Orchestrator voert nu de Zod-wasstraat uit op 'activeHoldings' en 'prices'
       const snapshot = calculatePortfolioSnapshot(
         assets,
         classes,
@@ -56,20 +63,16 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
         prices
       );
 
-      // 4. De "Brug" naar de UI:
-      // We zorgen dat het portfolio object exact de vorm heeft die de UI verwacht.
-      // We overschrijven enrichedAssets alleen als de snapshot die niet al heeft.
-      const finalPortfolio: Portfolio = {
-        ...snapshot,
-        enrichedAssets: (snapshot as any).enrichedAssets || assets, 
-      };
-
+      // 4. Staat updaten
+      // Snapshot voldoet nu aan de verrijkte interfaces (incl. market_value, cost_basis)
       set({ 
-        portfolio: finalPortfolio, 
+        portfolio: snapshot, 
         isInitialised: true 
       });
 
-      console.log("🏪 Store Success: Portfolio updated with", finalPortfolio.holdings.length, "holdings");
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`🏪 Store: Portfolio "${snapshot.name}" updated. Value: ${snapshot.totalValue}`);
+      }
     } catch (error) {
       console.error("❌ Store Update Error:", error);
     }
