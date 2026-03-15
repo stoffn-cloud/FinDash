@@ -1,6 +1,6 @@
 "use client";
 
-import { Trash2, Search, AlertCircle, Check } from "lucide-react";
+import { Trash2, Search, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useRef, useEffect, useMemo } from "react";
 
@@ -35,7 +35,9 @@ export const NewTransactionRow = ({
     }).slice(0, 15);
   }, [searchTerm, availableAssets]);
 
-  const selectedAsset = availableAssets.find((a: any) => Number(a.ticker_id) === Number(row.ticker_id));
+  const selectedAsset = availableAssets.find(
+    (a: any) => Number(a.ticker_id) === Number(row?.ticker_id)
+  );
 
   return (
     <div className={`grid grid-cols-1 md:grid-cols-12 gap-3 p-4 rounded-2xl border items-end transition-all duration-300 ${
@@ -44,16 +46,15 @@ export const NewTransactionRow = ({
         : 'bg-rose-500/5 border-rose-500/30'
     }`}>
       
-      {/* 1. INSTRUMENT SELECTION (4 cols) */}
+      {/* 1. INSTRUMENT SELECTION */}
       <div className="md:col-span-4 space-y-1 relative" ref={wrapperRef}>
         <label className="text-[9px] font-black text-slate-600 uppercase tracking-widest px-1">Instrument</label>
         <div className="relative">
           <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 ${selectedAsset ? 'text-blue-500' : 'text-slate-500'}`} />
           <input 
             type="text"
-            // Placeholder aangepast naar "Select asset..."
             placeholder={selectedAsset ? `${selectedAsset.ticker} — ${selectedAsset.full_name}` : "Select asset..."}
-            value={searchTerm}
+            value={searchTerm || ""}
             onFocus={() => setIsOpen(true)}
             onChange={(e) => { setSearchTerm(e.target.value); setIsOpen(true); }}
             className={`w-full bg-slate-950 border text-white text-xs rounded-lg p-2.5 pl-9 outline-none transition-all ${
@@ -81,7 +82,7 @@ export const NewTransactionRow = ({
                     <span className="text-white font-bold text-xs group-hover:text-blue-400 uppercase">{asset.ticker}</span>
                     <span className="text-[10px] text-slate-500 truncate">{asset.full_name}</span>
                   </div>
-                  {Number(asset.ticker_id) === Number(row.ticker_id) && <Check className="w-3 h-3 text-blue-500" />}
+                  {Number(asset.ticker_id) === Number(row?.ticker_id) && <Check className="w-3 h-3 text-blue-500" />}
                 </div>
               ))
             ) : (
@@ -93,43 +94,45 @@ export const NewTransactionRow = ({
         )}
       </div>
 
-      {/* 2. PURCHASE DATE (3 cols) */}
+      {/* 2. PURCHASE DATE (Strict snake_case) */}
       <div className="md:col-span-3 space-y-1">
         <label className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Purchase Date</label>
         <input 
           type="date" 
-          value={row.purchaseDate}
-          onChange={(e) => onUpdate(index, 'purchaseDate', e.target.value)}
+          value={row?.purchase_date || ''}
+          onChange={(e) => onUpdate(index, 'purchase_date', e.target.value)}
           className="w-full bg-slate-950 border border-slate-800 text-white text-xs rounded-lg p-2.5 outline-none focus:border-blue-500/50 color-scheme-dark"
         />
       </div>
 
-      {/* 3. EXECUTION PRICE (2 cols) */}
+      {/* 3. EXECUTION PRICE (Strict snake_case) */}
       <div className="md:col-span-2 space-y-1">
         <label className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Price</label>
         <div className="relative">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 text-[10px]">$</span>
           <input 
-            type="number" step="0.01" 
-            value={row.purchasePrice}
-            onChange={(e) => onUpdate(index, 'purchasePrice', parseFloat(e.target.value) || 0)}
+            type="number" 
+            step="0.01" 
+            value={row?.purchase_price || ''}
+            onChange={(e) => onUpdate(index, 'purchase_price', e.target.value === '' ? 0 : parseFloat(e.target.value))}
             className="w-full bg-slate-950 border border-slate-800 text-white text-xs rounded-lg p-2.5 pl-7 outline-none focus:border-emerald-500/50"
           />
         </div>
       </div>
 
-      {/* 4. QUANTITY (2 cols) */}
+      {/* 4. QUANTITY */}
       <div className="md:col-span-2 space-y-1">
         <label className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Quantity</label>
         <input 
-          type="number" step="0.001" 
-          value={row.quantity}
-          onChange={(e) => onUpdate(index, 'quantity', parseFloat(e.target.value) || 0)}
+          type="number" 
+          step="0.001" 
+          value={row?.quantity || ''}
+          onChange={(e) => onUpdate(index, 'quantity', e.target.value === '' ? 0 : parseFloat(e.target.value))}
           className="w-full bg-slate-950 border border-slate-800 text-white text-xs rounded-lg p-2.5 outline-none focus:border-emerald-500/50"
         />
       </div>
 
-      {/* 5. REMOVE BUTTON (1 col) */}
+      {/* 5. REMOVE BUTTON */}
       <div className="md:col-span-1 flex justify-end pb-1">
         <Button 
           variant="ghost" 

@@ -21,19 +21,23 @@ export default function PortfolioEditor({ portfolio, onSuccess }: PortfolioEdito
     return storePortfolio?.enrichedAssets || portfolio?.enrichedAssets || [];
   }, [portfolio?.enrichedAssets, storePortfolio?.enrichedAssets]);
 
-  // Sorteer op purchase_date (snake_case)
+  // Sortering strikt op purchase_date (snake_case)
   const latestDbHoldings = useMemo(() => {
-    // We gebruiken hier de holdings die via de props binnenkomen (deze zijn meestal het meest up-to-date na een SQL sync)
-    const holdings = portfolio.holdings || [];
+    const holdings: EnrichedHolding[] = portfolio.holdings || [];
     return [...holdings]
-      .sort((a, b) => new Date(b.purchase_date).getTime() - new Date(a.purchase_date).getTime())
+      .sort((a, b) => {
+        // Gebruik de Date constructor veilig met de snake_case velden
+        const dateA = new Date(a.purchase_date).getTime();
+        const dateB = new Date(b.purchase_date).getTime();
+        return dateB - dateA;
+      })
       .slice(0, 3); 
   }, [portfolio.holdings]);
 
   const isDemoMode = portfolio.name === "Demo Portfolio";
   
-  const [newHolding, setNewHolding] = useState<any>({ 
-    tempId: crypto.randomUUID(),
+  // State geïnitialiseerd met snake_case om te matchen met EnrichedHolding types
+  const [newHolding, setNewHolding] = useState({ 
     ticker_id: 0, 
     quantity: 0, 
     purchase_price: 0, 
@@ -42,23 +46,24 @@ export default function PortfolioEditor({ portfolio, onSuccess }: PortfolioEdito
 
   const [isSaving, setIsSaving] = useState(false);
 
+  // Update functie die de snake_case keys verwacht van de NewTransactionRow
   const updateRow = (_index: number, field: string, value: any) => {
-    setNewHolding((prev: any) => ({ ...prev, [field]: value }));
+    setNewHolding((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleCommit = async () => {
-    // 1. Validatie: check of alles is ingevuld en of quantity/price boven 0 zijn
     const qty = Number(newHolding.quantity);
     const price = Number(newHolding.purchase_price);
 
-    if (newHolding.ticker_id === 0 || qty <= 0 || price <= 0) {
+    // Validatie op basis van snake_case keys
+    if (!newHolding.ticker_id || newHolding.ticker_id === 0 || qty <= 0 || price <= 0) {
       alert("⚠️ Vul een geldig instrument, prijs en hoeveelheid in.");
       return;
     }
 
     setIsSaving(true);
     try {
-      // 2. Data opschonen voor SQL: forceer nummers
+      // Directe doorgeef van snake_case naar de Server Action
       await addUserHolding({
         ticker_id: Number(newHolding.ticker_id),
         price: price,
@@ -66,20 +71,18 @@ export default function PortfolioEditor({ portfolio, onSuccess }: PortfolioEdito
         purchase_date: newHolding.purchase_date,
       });
       
-      // 3. Reset state naar beginwaarden
+      // Reset naar schone snake_case state
       setNewHolding({
-        tempId: crypto.randomUUID(),
         ticker_id: 0, 
         quantity: 0, 
         purchase_price: 0, 
         purchase_date: new Date().toISOString().split('T')[0] 
       });
 
-      // Trigger de refresh van de pagina/data
       if (onSuccess) onSuccess(); 
     } catch (err) {
       console.error("❌ MySQL Save Error:", err);
-      alert("Er ging iets mis bij het opslaan. Controleer de console.");
+      alert("Er ging iets mis bij het opslaan.");
     } finally {
       setIsSaving(false);
     }
@@ -87,7 +90,7 @@ export default function PortfolioEditor({ portfolio, onSuccess }: PortfolioEdito
 
   const handleDeleteExisting = async (id: number) => {
     if (!id) return;
-    if (confirm("Weet je zeker dat je deze transactie wilt verwijderen uit de database?")) {
+    if (confirm("Weet je zeker dat je deze transactie wilt verwijderen?")) {
       try {
         await deleteUserHolding(id);
         if (onSuccess) onSuccess();
@@ -132,8 +135,7 @@ export default function PortfolioEditor({ portfolio, onSuccess }: PortfolioEdito
               disabled={isSaving}
               className="bg-blue-600 hover:bg-blue-500 text-white px-10 py-6 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-blue-500/20 transition-all active:scale-95"
             >
-              <Save className="w-4 h-4 mr-2" />
-              {isSaving ? "Syncing..." : "Sync with Database"}
+              {isSaving ? "Syncing..." : <><Save className="w-4 h-4 mr-2" /> Sync with Database</>}
             </Button>
           </div>
         )}
